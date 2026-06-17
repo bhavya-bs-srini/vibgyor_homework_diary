@@ -42,53 +42,53 @@ def fmt(dt): return dt.strftime('%-d %b %Y') if hasattr(dt, 'strftime') else str
 
 def parse(text, date):
     periods, cur = [], None
-    # Track state: if we just saw a header, capture the next line's value
-    pending_header = None 
+    pending_header = None # Used to track if we need to capture value on the next line
     
     for line in text.splitlines():
         line = line.strip()
         if not line or re.match(r'^(Sub\s*Topic|Topic|CW|Words\s+for|Additional|GROUP)', line, re.IGNORECASE): 
             continue
-        
-        # 1. Capture Headers that might have values on next lines
-        m_subj = re.match(r'^Subject\s*(.*)', line, re.IGNORECASE)
-        m_reinf = re.match(r'^Reinforce?ment\s*(.*)', line, re.IGNORECASE)
-        m_subm = re.match(r'^Submission\s*date?\s*(.*)', line, re.IGNORECASE)
-        
-        # Handle "Period" start
+            
+        # Detect Period start to initialize 'cur'
         if re.match(r'^Period\s*[-–]\s*\d+', line, re.IGNORECASE):
             if cur and cur.get('subject'): periods.append(cur)
             cur = {'date': date, 'subject': '', 'reinforcement': 'NIL', 'submission': 'NIL'}
             pending_header = None
             continue
+            
+        # Only process fields if we are currently inside a valid Period (cur is not None)
+        if cur is None: 
+            continue
+            
+        m_subj = re.match(r'^Subject\s*(.*)', line, re.IGNORECASE)
+        m_reinf = re.match(r'^Reinforce?ment\s*(.*)', line, re.IGNORECASE)
+        m_subm = re.match(r'^Submission\s*date?\s*(.*)', line, re.IGNORECASE)
         
-        # Capture logic for headers
         if m_subj:
             val = clean(m_subj.group(1))
             if val: cur['subject'] = norm_subj(val)
             else: pending_header = 'subject'
             continue
-        if m_reinf:
+        elif m_reinf:
             val = clean(m_reinf.group(1))
             if val: cur['reinforcement'] = val
             else: pending_header = 'reinforcement'
             continue
-        if m_subm:
+        elif m_subm:
             val = clean(m_subm.group(1))
             if val: cur['submission'] = val
             else: pending_header = 'submission'
             continue
             
-        # 2. If we were waiting for a header value, capture it now
-        if pending_header and cur is not None:
+        # If we were waiting for a header value from the previous line
+        if pending_header:
             val = clean(line)
             if not is_nil(val):
                 if pending_header == 'subject': cur['subject'] = norm_subj(val)
                 elif pending_header == 'reinforcement': cur['reinforcement'] = val
                 elif pending_header == 'submission': cur['submission'] = val
             pending_header = None
-            continue
-
+            
     if cur and cur.get('subject'): periods.append(cur)
     return periods
 
