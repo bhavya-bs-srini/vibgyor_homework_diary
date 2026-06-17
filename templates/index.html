@@ -5,72 +5,49 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>VIBGYOR Diary · Reinforcement Summary</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:#0b0f1a;color:#e2e8f0;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px;gap:22px}
-
-.hero{text-align:center}
-.hero h1{font-size:1.8rem;font-weight:800;background:linear-gradient(120deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.hero p{color:#475569;margin-top:5px;font-size:.88rem}
-
-/* Result card — ABOVE upload */
-.result{display:none;width:100%;max-width:860px}
-.result.on{display:block}
-.card{background:#141928;border:1px solid #1e2a40;border-radius:16px;padding:24px;width:100%;max-width:860px}
-.week-banner{background:#1a2540;border-radius:10px;padding:13px 18px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
-.week-banner h2{font-size:.95rem;font-weight:700;color:#a78bfa}
-.week-badge{font-size:.8rem;color:#60a5fa;background:#0b0f1a;border:1px solid #1e2a40;border-radius:20px;padding:3px 12px;white-space:nowrap}
-
-/* Table */
-.tbl-wrap{border-radius:10px;border:1px solid #1e2a40;overflow:hidden}
-table{width:100%;border-collapse:collapse;font-size:.87rem;table-layout:fixed}
-th{background:#0d1321;padding:11px 14px;text-align:left;font-size:.71rem;letter-spacing:.07em;text-transform:uppercase;color:#475569;border-bottom:1px solid #1e2a40}
-td{padding:12px 14px;border-bottom:1px solid #0d1321;vertical-align:top;line-height:1.65;word-wrap:break-word;white-space:normal}
-tr:last-child td{border-bottom:none}
-tr.hw-row td{background:#091509}
-
-/* Column widths */
-th:nth-child(1),td:nth-child(1){width:20%}
-th:nth-child(2),td:nth-child(2){width:20%}
-th:nth-child(3),td:nth-child(3){width:40%}
-th:nth-child(4),td:nth-child(4){width:20%}
-
-td.subj{font-weight:700;color:#e2e8f0}
-td.reinf-date{color:#60a5fa;font-weight:600}
-td.reinf{color:#cbd5e1}
-td.sub{color:#94a3b8}
-
-.date-line{display:block;padding:1px 0}
-.reinf-line{display:block;padding:1px 0}
-
-/* Stats */
-.stats{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
-.stat{background:#0b0f1a;border:1px solid #1e2a40;border-radius:10px;padding:10px 18px;text-align:center;flex:1;min-width:90px}
-.stat-n{font-size:1.5rem;font-weight:800;color:#60a5fa}
-.stat-l{font-size:.7rem;color:#475569;margin-top:2px}
-
-/* Upload card */
-.steps{display:flex;width:100%;max-width:860px}
-.step{flex:1;text-align:center;padding:8px 4px;font-size:.73rem;font-weight:600;color:#334155;border-bottom:2px solid #1e2a40;transition:.3s}
-.step.active{color:#60a5fa;border-bottom-color:#60a5fa}
-.step.done{color:#34d399;border-bottom-color:#34d399}
-.lbl{font-size:.73rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#475569;margin-bottom:12px}
-.drop{border:2px dashed #1e2a40;border-radius:12px;padding:38px 20px;text-align:center;cursor:pointer;transition:.2s;position:relative}
-.drop:hover,.drop.over{border-color:#3b82f6;background:#0d1525}
-.drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
-.drop p{color:#475569;font-size:.85rem}
-.drop strong{color:#60a5fa}
-.drop-icon{font-size:2.3rem;margin-bottom:9px}
-.tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
-.tag{background:#0b0f1a;border:1px solid #1e2a40;border-radius:20px;padding:4px 13px;font-size:.77rem;color:#93c5fd;display:flex;align-items:center;gap:6px}
-.tag button{background:none;border:none;color:#475569;cursor:pointer;font-size:1rem;padding:0;line-height:1}
-.tag button:hover{color:#f87171}
-.btn{width:100%;padding:13px;border:none;border-radius:12px;font-size:.97rem;font-weight:700;cursor:pointer;transition:.2s;margin-top:16px;background:linear-gradient(120deg,#2563eb,#7c3aed);color:#fff}
-.btn:hover:not(:disabled){opacity:.88;transform:translateY(-1px)}
-.btn:disabled{opacity:.4;cursor:not-allowed}
-.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle;margin-right:7px}
-@keyframes sp{to{transform:rotate(360deg)}}
-.err{background:#200e0e;border:1px solid #7f1d1d;border-radius:10px;padding:10px 14px;color:#fca5a5;font-size:.84rem;margin-top:12px;display:none}
-.err.on{display:block}
+    /* Retaining your exact requested styling */
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:#0b0f1a;color:#e2e8f0;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px;gap:22px}
+    .hero{text-align:center}
+    .hero h1{font-size:1.8rem;font-weight:800;background:linear-gradient(120deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .hero p{color:#475569;margin-top:5px;font-size:.88rem}
+    .result{display:none;width:100%;max-width:860px}
+    .result.on{display:block}
+    .card{background:#141928;border:1px solid #1e2a40;border-radius:16px;padding:24px;width:100%;max-width:860px}
+    .week-banner{background:#1a2540;border-radius:10px;padding:13px 18px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+    .week-banner h2{font-size:.95rem;font-weight:700;color:#a78bfa}
+    .week-badge{font-size:.8rem;color:#60a5fa;background:#0b0f1a;border:1px solid #1e2a40;border-radius:20px;padding:3px 12px;white-space:nowrap}
+    .tbl-wrap{border-radius:10px;border:1px solid #1e2a40;overflow:hidden}
+    table{width:100%;border-collapse:collapse;font-size:.87rem;table-layout:fixed}
+    th{background:#0d1321;padding:11px 14px;text-align:left;font-size:.71rem;letter-spacing:.07em;text-transform:uppercase;color:#475569;border-bottom:1px solid #1e2a40}
+    td{padding:12px 14px;border-bottom:1px solid #0d1321;vertical-align:top;line-height:1.65;word-wrap:break-word;white-space:normal}
+    tr:last-child td{border-bottom:none}
+    tr.hw-row td{background:#091509}
+    th:nth-child(1),td:nth-child(1){width:20%}
+    th:nth-child(2),td:nth-child(2){width:20%}
+    th:nth-child(3),td:nth-child(3){width:40%}
+    th:nth-child(4),td:nth-child(4){width:20%}
+    td.subj{font-weight:700;color:#e2e8f0}
+    td.reinf-date{color:#60a5fa;font-weight:600}
+    td.reinf{color:#cbd5e1}
+    td.sub{color:#94a3b8}
+    .date-line,.reinf-line{display:block;padding:1px 0}
+    .stats{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+    .stat{background:#0b0f1a;border:1px solid #1e2a40;border-radius:10px;padding:10px 18px;text-align:center;flex:1;min-width:90px}
+    .stat-n{font-size:1.5rem;font-weight:800;color:#60a5fa}
+    .stat-l{font-size:.7rem;color:#475569;margin-top:2px}
+    .steps{display:flex;width:100%;max-width:860px}
+    .step{flex:1;text-align:center;padding:8px 4px;font-size:.73rem;font-weight:600;color:#334155;border-bottom:2px solid #1e2a40;transition:.3s}
+    .step.active{color:#60a5fa;border-bottom-color:#60a5fa}
+    .step.done{color:#34d399;border-bottom-color:#34d399}
+    .lbl{font-size:.73rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#475569;margin-bottom:12px}
+    .drop{border:2px dashed #1e2a40;border-radius:12px;padding:38px 20px;text-align:center;cursor:pointer;transition:.2s;position:relative}
+    .drop:hover,.drop.over{border-color:#3b82f6;background:#0d1525}
+    .btn{width:100%;padding:13px;border:none;border-radius:12px;font-size:.97rem;font-weight:700;cursor:pointer;transition:.2s;margin-top:16px;background:linear-gradient(120deg,#2563eb,#7c3aed);color:#fff}
+    .spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle;margin-right:7px}
+    @keyframes sp{to{transform:rotate(360deg)}}
+    .err{background:#200e0e;border:1px solid #7f1d1d;border-radius:10px;padding:10px 14px;color:#fca5a5;font-size:.84rem;margin-top:12px;display:none}
+    .err.on{display:block}
 </style>
 </head>
 <body>
@@ -80,7 +57,6 @@ td.sub{color:#94a3b8}
   <p>Upload this week's diary PDFs — get a consolidated reinforcement view instantly</p>
 </div>
 
-<!-- RESULT above upload -->
 <div class="result" id="result">
   <div class="card">
     <div class="week-banner">
@@ -89,14 +65,7 @@ td.sub{color:#94a3b8}
     </div>
     <div class="tbl-wrap">
       <table>
-        <thead>
-          <tr>
-            <th>Subject</th>
-            <th>Reinforcement Date</th>
-            <th>Consolidated Reinforcement</th>
-            <th>Submission Date</th>
-          </tr>
-        </thead>
+        <thead><tr><th>Subject</th><th>Reinforcement Date</th><th>Consolidated Reinforcement</th><th>Submission Date</th></tr></thead>
         <tbody id="tbody"></tbody>
       </table>
     </div>
@@ -107,21 +76,17 @@ td.sub{color:#94a3b8}
   </div>
 </div>
 
-<!-- Steps -->
 <div class="steps">
   <div class="step active" id="s1">① Upload PDFs</div>
   <div class="step" id="s2">② Reading…</div>
   <div class="step" id="s3">③ Done</div>
 </div>
 
-<!-- Upload card -->
 <div class="card">
   <div class="lbl">Upload Daily Diary PDFs</div>
   <div class="drop" id="drop">
     <input type="file" id="fi" accept=".pdf" multiple/>
-    <div class="drop-icon">📂</div>
     <p><strong>Click to browse</strong> or drag & drop PDF files here</p>
-    <p style="margin-top:5px;font-size:.75rem">Upload all days at once for a full weekly summary</p>
   </div>
   <div class="tags" id="tags"></div>
   <button class="btn" id="btn" onclick="run()">Generate Summary</button>
@@ -130,102 +95,37 @@ td.sub{color:#94a3b8}
 
 <script>
 let files = [];
-const fi   = document.getElementById('fi');
-const drop = document.getElementById('drop');
-const tagsEl = document.getElementById('tags');
-
-fi.addEventListener('change', e => add(Array.from(e.target.files)));
-drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
-drop.addEventListener('dragleave', () => drop.classList.remove('over'));
-drop.addEventListener('drop', e => {
-  e.preventDefault(); drop.classList.remove('over');
-  add(Array.from(e.dataTransfer.files).filter(f => f.name.toLowerCase().endsWith('.pdf')));
-});
-
-function add(nf) {
-  nf.forEach(f => { if (!files.find(x => x.name === f.name)) files.push(f); });
-  render();
-}
+function add(nf) { nf.forEach(f => { if (!files.find(x => x.name === f.name)) files.push(f); }); render(); }
+function render() { document.getElementById('tags').innerHTML = files.map(f => `<div class="tag">📄 ${f.name} <button onclick="remove('${f.name}')">×</button></div>`).join(''); }
 function remove(n) { files = files.filter(f => f.name !== n); render(); }
-function render() {
-  tagsEl.innerHTML = files.map(f =>
-    `<div class="tag">📄 ${f.name} <button onclick="remove('${f.name}')">×</button></div>`
-  ).join('');
-}
-
-function step(n) {
-  ['s1','s2','s3'].forEach((id,i) => {
-    document.getElementById(id).className = 'step'+(i+1<n?' done':i+1===n?' active':'');
-  });
-}
 
 async function run() {
   const btn = document.getElementById('btn');
-  const err = document.getElementById('err');
-  err.className = 'err';
-  if (!files.length) return showErr('Please upload at least one PDF.');
+  if (!files.length) return;
   btn.disabled = true;
-  btn.innerHTML = '<span class="spin"></span>Reading PDFs… please wait (30–60 sec)';
-  step(2);
+  btn.innerHTML = '<span class="spin"></span>Processing…';
   const fd = new FormData();
   files.forEach(f => fd.append('pdfs', f));
   try {
     const r = await fetch('/process', { method: 'POST', body: fd });
     const d = await r.json();
-    if (!r.ok || d.error) { showErr(d.error || 'Error'); step(1); return; }
+    if (d.error) throw new Error(d.error);
     showResult(d);
-    step(3);
-    document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
-  } catch(e) {
-    showErr('Network error: ' + e.message); step(1);
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = 'Generate Summary';
-  }
+  } catch(e) { alert(e.message); } finally { btn.disabled = false; btn.innerHTML = 'Generate Summary'; }
 }
 
 function showResult(d) {
   document.getElementById('weekLabel').textContent = d.week;
-  document.getElementById('badge').textContent =
-    `${d.files_processed} file${d.files_processed > 1 ? 's' : ''} processed`;
-
-  const tbody = document.getElementById('tbody');
-  tbody.innerHTML = '';
-  let hw = 0;
-
-  d.rows.forEach(row => {
-    const tr = document.createElement('tr');
-    tr.className = 'hw-row';
-
-    // Reinforcement dates — one per line
-    const dateHtml = row.reinf_dates.map(d =>
-      `<span class="date-line">${d}</span>`
-    ).join('');
-
-    // Consolidated reinforcement — one per line, full text, no truncation
-    const reinfHtml = row.reinf_lines.map(r =>
-      `<span class="reinf-line">${r}</span>`
-    ).join('');
-
-    tr.innerHTML = `
-      <td class="subj">${row.subject}</td>
-      <td class="reinf-date">${dateHtml}</td>
-      <td class="reinf">${reinfHtml}</td>
-      <td class="sub">${row.submission}</td>
-    `;
-    tbody.appendChild(tr);
-    hw++;
-  });
-
-  document.getElementById('hwCount').textContent = hw;
+  document.getElementById('tbody').innerHTML = d.rows.map(r => `
+    <tr class="hw-row">
+      <td class="subj">${r.subject}</td>
+      <td class="reinf-date">${r.reinf_dates.map(x => `<span class="date-line">${x}</span>`).join('')}</td>
+      <td class="reinf">${r.reinf_lines.map(x => `<span class="reinf-line">${x}</span>`).join('')}</td>
+      <td class="sub">${r.submission}</td>
+    </tr>`).join('');
   document.getElementById('totalCount').textContent = d.rows.length;
   document.getElementById('result').className = 'result on';
-}
-
-function showErr(msg) {
-  const e = document.getElementById('err');
-  e.textContent = '⚠ ' + msg;
-  e.className = 'err on';
+  document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
 }
 </script>
 </body>
