@@ -1,49 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Homework Diary</title>
-    <style>
-        body { font-family: sans-serif; margin: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f4f4f4; }
-        h2 { color: #333; border-bottom: 2px solid #333; padding-bottom: 5px; }
-        h3 { color: #555; }
-    </style>
-</head>
 <body>
-    <h1>Weekly Homework Reinforcement</h1>
+    <h1>Homework Diary</h1>
+    <input type="file" id="pdfInput" multiple accept=".pdf">
+    <button onclick="uploadFiles()">Process PDFs</button>
+    <div id="results"></div>
 
-    {% if data %}
-        {% for week, subjects in data.items() %}
-            <h2>Week Beginning: {{ week }}</h2>
-            
-            {% for subject, tasks in subjects.items() %}
-                <h3>Subject: {{ subject }}</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Reinforcement Task</th>
-                            <th>Submission Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for task in tasks %}
-                        <tr>
-                            <td>{{ task.date }}</td>
-                            <td>{{ task.reinforcement }}</td>
-                            <td>{{ task.submission }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            {% endfor %}
-            
-        {% endfor %}
-    {% else %}
-        <p>No reinforcement data available at this time.</p>
-    {% endif %}
+    <script>
+        async function uploadFiles() {
+            let formData = new FormData();
+            let files = document.getElementById('pdfInput').files;
+            for(let f of files) formData.append('pdfs', f);
+            let res = await fetch('/process', {method: 'POST', body: formData});
+            let data = await res.json();
+            if (data.error) { alert(data.error); return; }
+
+            let html = `<h2>Week: ${data.week}</h2><table border="1"><tr><th>Subject</th><th>Dates</th><th>Tasks</th><th>Submission</th></tr>`;
+            data.rows.forEach(r => {
+                html += `<tr><td>${r.subject}</td><td>${r.reinf_dates.join('<br>')}</td><td>${r.reinf_lines.join('<br>')}</td><td>${r.submission}</td></tr>`;
+            });
+            document.getElementById('results').innerHTML = html + '</table>';
+        }
+    </script>
 </body>
 </html>
