@@ -41,7 +41,6 @@ def parse_date_str(s):
 def fmt(dt): return dt.strftime('%-d %b %Y') if hasattr(dt, 'strftime') else str(dt)
 
 def parse(text, date):
-def parse(text, date):
     periods, cur = [], None
     # Track state: if we just saw a header, capture the next line's value
     pending_header = None 
