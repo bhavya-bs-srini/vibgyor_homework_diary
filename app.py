@@ -8,7 +8,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
 
 # --- Path Config: Linux-friendly ---
 # On Windows, you can keep the explicit paths if needed, 
