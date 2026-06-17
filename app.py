@@ -1,7 +1,7 @@
 import os, re
 from flask import Flask, request, jsonify, render_template
 from pdf2image import convert_from_path
-from PIL import ImageOps
+from PIL import Image, ImageOps
 import pytesseract
 import pdfplumber
 from collections import defaultdict
@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
+# Linux-friendly Tesseract command
 pytesseract.pytesseract.tesseract_cmd = os.getenv('TESSERACT_CMD', '/usr/bin/tesseract')
 
 # --- CONFIGS ---
@@ -69,11 +70,19 @@ def parse(text, date):
     return periods
 
 def ocr_pdf(path):
+    # Ensure poppler-utils is installed in your Docker/Linux environment
     imgs = convert_from_path(path, dpi=200)
     text = ''
     for img in imgs:
         text += pytesseract.image_to_string(ImageOps.autocontrast(img.convert('L')), config='--psm 4 --oem 1') + '\n'
     return text
+
+def extract_date_from_filename(fname):
+    m = re.search(r'(\d{2})[._](\d{2})[._](\d{2,4})', fname)
+    if m:
+        months = {'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'Jun','07':'Jul','08':'Aug','09':'Sep','10':'Oct','11':'Nov','12':'Dec'}
+        return f"{m.group(1)}-{months.get(m.group(2), m.group(2))}-{m.group(3)[-2:]}"
+    return None
 
 def consolidate(all_periods, friday_str, nxt_monday_str):
     subj_date, subj_sub, seen = defaultdict(lambda: defaultdict(list)), defaultdict(lambda: 'NIL'), set()
@@ -103,8 +112,7 @@ def process_pdfs(pdf_paths):
     all_periods, dates_seen = [], []
     for path in pdf_paths:
         fname = os.path.basename(path)
-        m = re.search(r'(\d{2})[._](\d{2})[._](\d{2,4})', fname)
-        date_hint = f"{m.group(1)}-{m.group(2)}-{m.group(3)}" if m else None
+        date_hint = extract_date_from_filename(fname)
         if date_hint: dates_seen.append(date_hint)
         all_periods += parse(ocr_pdf(path), date_hint or 'Unknown')
     
@@ -118,7 +126,6 @@ def process_pdfs(pdf_paths):
     
     return consolidate(all_periods, friday, nxt_mon), fmt(monday_dt) if monday_dt else 'Unknown'
 
-# --- ROUTES ---
 @app.route('/')
 def index(): return render_template('index.html')
 
@@ -129,10 +136,9 @@ def process():
     try:
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
         for f in files:
-            if f and f.filename.lower().endswith('.pdf'):
-                path = os.path.join(app.config['UPLOAD_FOLDER'], f.filename)
-                f.save(path)
-                saved.append(path)
+            path = os.path.join(app.config['UPLOAD_FOLDER'], f.filename)
+            f.save(path)
+            saved.append(path)
         rows, week = process_pdfs(saved)
         return jsonify({'success': True, 'rows': rows, 'week': week, 'files_processed': len(saved)})
     except Exception as e:
