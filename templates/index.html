@@ -1,18 +1,49 @@
-<div id="diary-container">
-    {% for week, subjects in data.items() %}
-        <h2>Week Beginning: {{ week }}</h2>
-        <table border="1">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Homework Diary</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f4f4f4; }
+        h2 { color: #333; border-bottom: 2px solid #333; padding-bottom: 5px; }
+        h3 { color: #555; }
+    </style>
+</head>
+<body>
+    <h1>Weekly Homework Reinforcement</h1>
+
+    {% if data %}
+        {% for week, subjects in data.items() %}
+            <h2>Week Beginning: {{ week }}</h2>
+            
             {% for subject, tasks in subjects.items() %}
-                <tr><td colspan="4"><strong>{{ subject }}</strong></td></tr>
-                {% for task in tasks %}
-                    <tr>
-                        <td></td>
-                        <td>{{ task.date }}</td>
-                        <td>{{ task.reinforcement }}</td>
-                        <td>{{ task.submission }}</td>
-                    </tr>
-                {% endfor %}
+                <h3>Subject: {{ subject }}</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Reinforcement Task</th>
+                            <th>Submission Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for task in tasks %}
+                        <tr>
+                            <td>{{ task.date }}</td>
+                            <td>{{ task.reinforcement }}</td>
+                            <td>{{ task.submission }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             {% endfor %}
-        </table>
-    {% endfor %}
-</div>
+            
+        {% endfor %}
+    {% else %}
+        <p>No reinforcement data available at this time.</p>
+    {% endif %}
+</body>
+</html>
