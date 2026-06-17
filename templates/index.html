@@ -95,37 +95,74 @@
 
 <script>
 let files = [];
-function add(nf) { nf.forEach(f => { if (!files.find(x => x.name === f.name)) files.push(f); }); render(); }
-function render() { document.getElementById('tags').innerHTML = files.map(f => `<div class="tag">📄 ${f.name} <button onclick="remove('${f.name}')">×</button></div>`).join(''); }
+const dropArea = document.getElementById('drop');
+const fileInput = document.getElementById('fi');
+
+// Handle Drag and Drop
+['dragover', 'dragleave', 'drop'].forEach(evt => dropArea.addEventListener(evt, e => {
+    e.preventDefault();
+    if (evt === 'drop') add(e.dataTransfer.files);
+}));
+
+fileInput.addEventListener('change', (e) => add(e.target.files));
+
+function add(nf) { 
+    Array.from(nf).forEach(f => { if (!files.find(x => x.name === f.name)) files.push(f); }); 
+    render(); 
+}
+
+function render() { 
+    document.getElementById('tags').innerHTML = files.map(f => 
+        `<div style="margin:5px; padding:5px; background:#1e2a40; border-radius:5px; display:inline-block;">📄 ${f.name} <button onclick="remove('${f.name}')">×</button></div>`
+    ).join(''); 
+}
+
 function remove(n) { files = files.filter(f => f.name !== n); render(); }
 
 async function run() {
-  const btn = document.getElementById('btn');
-  if (!files.length) return;
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spin"></span>Processing…';
-  const fd = new FormData();
-  files.forEach(f => fd.append('pdfs', f));
-  try {
-    const r = await fetch('/process', { method: 'POST', body: fd });
-    const d = await r.json();
-    if (d.error) throw new Error(d.error);
-    showResult(d);
-  } catch(e) { alert(e.message); } finally { btn.disabled = false; btn.innerHTML = 'Generate Summary'; }
+    const btn = document.getElementById('btn');
+    const err = document.getElementById('err');
+    if (!files.length) { alert("Please upload files first"); return; }
+    
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span>Processing…';
+    err.className = 'err';
+    
+    // Update steps UI
+    document.getElementById('s1').className = 'step done';
+    document.getElementById('s2').className = 'step active';
+
+    const fd = new FormData();
+    files.forEach(f => fd.append('pdfs', f));
+    
+    try {
+        const r = await fetch('/process', { method: 'POST', body: fd });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || 'Server error');
+        
+        document.getElementById('s2').className = 'step done';
+        document.getElementById('s3').className = 'step active';
+        showResult(d);
+    } catch(e) { 
+        err.textContent = e.message;
+        err.className = 'err on';
+        btn.disabled = false;
+        btn.innerHTML = 'Generate Summary';
+    }
 }
 
 function showResult(d) {
-  document.getElementById('weekLabel').textContent = d.week;
-  document.getElementById('tbody').innerHTML = d.rows.map(r => `
-    <tr class="hw-row">
-      <td class="subj">${r.subject}</td>
-      <td class="reinf-date">${r.reinf_dates.map(x => `<span class="date-line">${x}</span>`).join('')}</td>
-      <td class="reinf">${r.reinf_lines.map(x => `<span class="reinf-line">${x}</span>`).join('')}</td>
-      <td class="sub">${r.submission}</td>
-    </tr>`).join('');
-  document.getElementById('totalCount').textContent = d.rows.length;
-  document.getElementById('result').className = 'result on';
-  document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('weekLabel').textContent = d.week;
+    document.getElementById('tbody').innerHTML = d.rows.map(r => `
+        <tr>
+          <td class="subj">${r.subject}</td>
+          <td class="reinf-date">${r.reinf_dates.map(x => `<span class="date-line">${x}</span>`).join('')}</td>
+          <td class="reinf">${r.reinf_lines.map(x => `<span class="reinf-line">${x}</span>`).join('')}</td>
+          <td class="sub">${r.submission}</td>
+        </tr>`).join('');
+    document.getElementById('totalCount').textContent = d.rows.length;
+    document.getElementById('result').className = 'result on';
+    document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
 }
 </script>
 </body>
