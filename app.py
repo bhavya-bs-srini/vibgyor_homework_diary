@@ -1,7 +1,7 @@
 import os, re
 from flask import Flask, request, jsonify, render_template
 from pdf2image import convert_from_path
-from PIL import Image, ImageOps
+from PIL import ImageOps
 import pytesseract
 import pdfplumber
 from collections import defaultdict
@@ -11,65 +11,116 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
 pytesseract.pytesseract.tesseract_cmd = os.getenv('TESSERACT_CMD', '/usr/bin/tesseract')
 
-# --- Core Helper Functions ---
+# --- CONFIGS ---
+SKIP = {'assembly', 'spark', 'library', 'skill', 'enrichment', 'language arts(support)', 'literature(support)', 'math-support', 'math support', 'public speaking'}
+SUBJ_MAP = {'language arts': 'Language Arts', 'language art': 'Language Arts', 'literature': 'Literature', 'ssc': 'SSC', 'math': 'Math', 'mathematics': 'Math', 'art': 'Art', 'computer': 'Computer', 'robotics': 'Robotics', '2nd language -hindi': '2ND LANGUAGE - Hindi', '2nd ianguage -hindi': '2ND LANGUAGE - Hindi', '2nd language - hindi': '2ND LANGUAGE - Hindi', '2ndlanguage-hindi': '2ND LANGUAGE - Hindi', '2nd language -kannada': '2ND LANGUAGE - Kannada', '2nd ianguage -kannada': '2ND LANGUAGE - Kannada', '2nd language - kannada': '2ND LANGUAGE - Kannada', '2ndlanguage-kannada': '2ND LANGUAGE - Kannada', 'kannada 2nd language': '2ND LANGUAGE - Kannada', 'kannada 2nd': '2ND LANGUAGE - Kannada', '3rd language-hindi': '3RD LANGUAGE - Hindi', '3rd language -hindi': '3RD LANGUAGE - Hindi', '3rdlanguage-hindi': '3RD LANGUAGE - Hindi', '3rd language - hindi': '3RD LANGUAGE - Hindi', 'srdlanguage-hindi': '3RD LANGUAGE - Hindi', '3rd language-kannada': '3RD LANGUAGE - Kannada', '3rdlanguage-kannada': '3RD LANGUAGE - Kannada', '3rd language - kannada': '3RD LANGUAGE - Kannada', 'srdlanguagekannada': '3RD LANGUAGE - Kannada'}
+
+# --- HELPER FUNCTIONS ---
 def norm_subj(s):
     s = re.sub(r'[\[\]_=\|\\,\(\)]+', ' ', s.strip().lower())
-    return re.sub(r'\s+', ' ', s).strip().title()
+    s = re.sub(r'\s+', ' ', s).strip()
+    return SUBJ_MAP.get(s, s.title())
 
-def extract_date_from_filename(fname):
-    m = re.search(r'(\d{2})[._](\d{2})[._](\d{2,4})', fname)
-    return f"{m.group(1)}-{m.group(2)}-{m.group(3)}" if m else None
+def is_nil(v):
+    if not v: return True
+    return bool(re.match(r'^(nil|nii|nls|nl|—|-|null|\.|n/a|bi|bs|by|ee|ca|we|cst|\s*)$', v.strip(), re.IGNORECASE))
+
+def clean(v):
+    v = re.sub(r'^[\[\|\\=_\-:\s]+', '', str(v))
+    v = re.sub(r'[\[\|\\=_\-—~\s]+$', '', v)
+    return v.strip()
 
 def parse_date_str(s):
     for fmt in ['%d-%b-%y', '%d-%b-%Y', '%d.%m.%y', '%d.%m.%Y', '%d/%m/%y', '%d/%m/%Y']:
         try: return datetime.strptime(s.strip(), fmt)
-        except: continue
+        except: pass
     return None
 
+def fmt(dt):
+    return dt.strftime('%-d %b %Y') if hasattr(dt, 'strftime') else str(dt)
+
+def parse(text, date):
+    periods, cur = [], None
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or re.match(r'^(Sub\s*Topic|Topic|CW|Words\s+for|Additional|GROUP)', line, re.IGNORECASE): continue
+        if re.match(r'^Period\s*[-–]\s*\d+', line, re.IGNORECASE):
+            if cur and cur.get('subject'): periods.append(cur)
+            cur = {'date': date, 'subject': '', 'reinforcement': 'NIL', 'submission': 'NIL'}
+            continue
+        m = re.match(r'^Subject\s+(.+)', line, re.IGNORECASE)
+        if m:
+            subj = norm_subj(clean(m.group(1)))
+            if cur and cur.get('subject'): periods.append(cur)
+            cur = {'date': date, 'subject': subj, 'reinforcement': 'NIL', 'submission': 'NIL'}
+            continue
+        if cur is None: continue
+        m = re.match(r'^Reinforce?ment\s*(.*)', line, re.IGNORECASE)
+        if m:
+            val = clean(m.group(1))
+            if val and not is_nil(val): cur['reinforcement'] = val
+            continue
+        m = re.match(r'^Submission\s*date?\s*(.*)', line, re.IGNORECASE)
+        if m:
+            val = clean(m.group(1))
+            if val and not is_nil(val): cur['submission'] = val
+            continue
+    if cur and cur.get('subject'): periods.append(cur)
+    return periods
+
 def ocr_pdf(path):
-    # Using 200 DPI for faster processing
     imgs = convert_from_path(path, dpi=200)
     text = ''
     for img in imgs:
         text += pytesseract.image_to_string(ImageOps.autocontrast(img.convert('L')), config='--psm 4 --oem 1') + '\n'
     return text
 
-def parse_pdf_content(text, date_str):
-    # YOUR ORIGINAL PARSE LOGIC GOES HERE
-    # This must return a list of dicts: [{'subject': '...', 'reinforcement': '...', 'submission': '...'}]
-    return []
-
-def consolidate_data(all_periods):
-    # YOUR ORIGINAL CONSOLIDATE LOGIC GOES HERE
-    # This must return a list of dicts: [{'subject': '...', 'reinf_dates': [...], 'reinf_lines': [...], 'submission': '...'}]
-    return []
+def consolidate(all_periods, friday_str, nxt_monday_str):
+    subj_date, subj_sub, seen = defaultdict(lambda: defaultdict(list)), defaultdict(lambda: 'NIL'), set()
+    for p in all_periods:
+        subj = p.get('subject', '').strip()
+        if not subj or subj.lower() in SKIP or len(subj) < 2: continue
+        reinf = p.get('reinforcement', 'NIL')
+        sub = p.get('submission', 'NIL')
+        date = p.get('date', '')
+        if not is_nil(reinf):
+            key = (subj, reinf, date)
+            if key not in seen:
+                seen.add(key)
+                subj_date[subj][date].append(reinf)
+        if not is_nil(sub) and subj_sub[subj] == 'NIL': subj_sub[subj] = sub
+    
+    rows = []
+    for subj in sorted(subj_date):
+        dates = sorted(subj_date[subj])
+        reinf_dates = [fmt(parse_date_str(d)) if parse_date_str(d) else d for d in dates]
+        reinf_lines = [', '.join(subj_date[subj][d]) for d in dates]
+        submission = (fmt(parse_date_str(subj_sub[subj])) if parse_date_str(subj_sub[subj]) else subj_sub[subj]) if subj_sub[subj] != 'NIL' else (friday_str if subj == 'Math' else nxt_monday_str)
+        rows.append({'subject': subj, 'reinf_dates': reinf_dates, 'reinf_lines': reinf_lines, 'submission': submission})
+    return rows
 
 def process_pdfs(pdf_paths):
-    all_periods = []
-    dates_found = []
+    all_periods, dates_seen = [], []
     for path in pdf_paths:
         fname = os.path.basename(path)
-        date_str = extract_date_from_filename(fname)
-        if date_str:
-            dt = parse_date_str(date_str)
-            if dt: dates_found.append(dt)
-        
-        text = ocr_pdf(path)
-        all_periods += parse_pdf_content(text, date_str)
+        m = re.search(r'(\d{2})[._](\d{2})[._](\d{2,4})', fname)
+        date_hint = f"{m.group(1)}-{m.group(2)}-{m.group(3)}" if m else None
+        if date_hint: dates_seen.append(date_hint)
+        all_periods += parse(ocr_pdf(path), date_hint or 'Unknown')
     
-    # Calculate Monday of the week
-    week_monday = "Unknown"
-    if dates_found:
-        earliest = min(dates_found)
-        mon = earliest - timedelta(days=earliest.weekday())
-        week_monday = mon.strftime('%d-%b-%y')
-        
-    return consolidate_data(all_periods), week_monday
+    monday_dt = None
+    if dates_seen:
+        d = parse_date_str(dates_seen[0])
+        if d: monday_dt = d - timedelta(days=d.weekday())
+    
+    friday = fmt(monday_dt + timedelta(days=4)) if monday_dt else 'Unknown'
+    nxt_mon = fmt(monday_dt + timedelta(days=7)) if monday_dt else 'Unknown'
+    
+    return consolidate(all_periods, friday, nxt_mon), fmt(monday_dt) if monday_dt else 'Unknown'
 
-# --- Routes ---
+# --- ROUTES ---
 @app.route('/')
-def index():
-    return render_template('index.html')
+def index(): return render_template('index.html')
 
 @app.route('/process', methods=['POST'])
 def process():
@@ -78,10 +129,10 @@ def process():
     try:
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
         for f in files:
-            path = os.path.join(app.config['UPLOAD_FOLDER'], f.filename)
-            f.save(path)
-            saved.append(path)
-        
+            if f and f.filename.lower().endswith('.pdf'):
+                path = os.path.join(app.config['UPLOAD_FOLDER'], f.filename)
+                f.save(path)
+                saved.append(path)
         rows, week = process_pdfs(saved)
         return jsonify({'success': True, 'rows': rows, 'week': week, 'files_processed': len(saved)})
     except Exception as e:
