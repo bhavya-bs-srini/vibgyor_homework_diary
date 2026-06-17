@@ -9,22 +9,19 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
-# Linux-friendly Tesseract command
 pytesseract.pytesseract.tesseract_cmd = os.getenv('TESSERACT_CMD', '/usr/bin/tesseract')
 
-# --- CONFIGS ---
+# --- 1. HELPER FUNCTIONS (From your original logic) ---
 SKIP = {'assembly', 'spark', 'library', 'skill', 'enrichment', 'language arts(support)', 'literature(support)', 'math-support', 'math support', 'public speaking'}
 SUBJ_MAP = {'language arts': 'Language Arts', 'language art': 'Language Arts', 'literature': 'Literature', 'ssc': 'SSC', 'math': 'Math', 'mathematics': 'Math', 'art': 'Art', 'computer': 'Computer', 'robotics': 'Robotics', '2nd language -hindi': '2ND LANGUAGE - Hindi', '2nd ianguage -hindi': '2ND LANGUAGE - Hindi', '2nd language - hindi': '2ND LANGUAGE - Hindi', '2ndlanguage-hindi': '2ND LANGUAGE - Hindi', '2nd language -kannada': '2ND LANGUAGE - Kannada', '2nd ianguage -kannada': '2ND LANGUAGE - Kannada', '2nd language - kannada': '2ND LANGUAGE - Kannada', '2ndlanguage-kannada': '2ND LANGUAGE - Kannada', 'kannada 2nd language': '2ND LANGUAGE - Kannada', 'kannada 2nd': '2ND LANGUAGE - Kannada', '3rd language-hindi': '3RD LANGUAGE - Hindi', '3rd language -hindi': '3RD LANGUAGE - Hindi', '3rdlanguage-hindi': '3RD LANGUAGE - Hindi', '3rd language - hindi': '3RD LANGUAGE - Hindi', 'srdlanguage-hindi': '3RD LANGUAGE - Hindi', '3rd language-kannada': '3RD LANGUAGE - Kannada', '3rdlanguage-kannada': '3RD LANGUAGE - Kannada', '3rd language - kannada': '3RD LANGUAGE - Kannada', 'srdlanguagekannada': '3RD LANGUAGE - Kannada'}
 
-# --- HELPER FUNCTIONS ---
 def norm_subj(s):
     s = re.sub(r'[\[\]_=\|\\,\(\)]+', ' ', s.strip().lower())
     s = re.sub(r'\s+', ' ', s).strip()
     return SUBJ_MAP.get(s, s.title())
 
 def is_nil(v):
-    if not v: return True
-    return bool(re.match(r'^(nil|nii|nls|nl|—|-|null|\.|n/a|bi|bs|by|ee|ca|we|cst|\s*)$', v.strip(), re.IGNORECASE))
+    return bool(re.match(r'^(nil|nii|nls|nl|—|-|null|\.|n/a|bi|bs|by|ee|ca|we|cst|\s*)$', str(v).strip(), re.IGNORECASE))
 
 def clean(v):
     v = re.sub(r'^[\[\|\\=_\-:\s]+', '', str(v))
@@ -37,8 +34,7 @@ def parse_date_str(s):
         except: pass
     return None
 
-def fmt(dt):
-    return dt.strftime('%-d %b %Y') if hasattr(dt, 'strftime') else str(dt)
+def fmt(dt): return dt.strftime('%-d %b %Y') if hasattr(dt, 'strftime') else str(dt)
 
 def parse(text, date):
     periods, cur = [], None
@@ -60,21 +56,17 @@ def parse(text, date):
         if m:
             val = clean(m.group(1))
             if val and not is_nil(val): cur['reinforcement'] = val
-            continue
         m = re.match(r'^Submission\s*date?\s*(.*)', line, re.IGNORECASE)
         if m:
             val = clean(m.group(1))
             if val and not is_nil(val): cur['submission'] = val
-            continue
     if cur and cur.get('subject'): periods.append(cur)
     return periods
 
 def ocr_pdf(path):
-    # Ensure poppler-utils is installed in your Docker/Linux environment
     imgs = convert_from_path(path, dpi=200)
     text = ''
-    for img in imgs:
-        text += pytesseract.image_to_string(ImageOps.autocontrast(img.convert('L')), config='--psm 4 --oem 1') + '\n'
+    for img in imgs: text += pytesseract.image_to_string(ImageOps.autocontrast(img.convert('L')), config='--psm 4 --oem 1') + '\n'
     return text
 
 def extract_date_from_filename(fname):
@@ -89,15 +81,11 @@ def consolidate(all_periods, friday_str, nxt_monday_str):
     for p in all_periods:
         subj = p.get('subject', '').strip()
         if not subj or subj.lower() in SKIP or len(subj) < 2: continue
-        reinf = p.get('reinforcement', 'NIL')
-        sub = p.get('submission', 'NIL')
-        date = p.get('date', '')
-        if not is_nil(reinf):
-            key = (subj, reinf, date)
+        if not is_nil(p.get('reinforcement')):
+            key = (subj, p.get('reinforcement'), p.get('date'))
             if key not in seen:
-                seen.add(key)
-                subj_date[subj][date].append(reinf)
-        if not is_nil(sub) and subj_sub[subj] == 'NIL': subj_sub[subj] = sub
+                seen.add(key); subj_date[subj][p.get('date', '')].append(p.get('reinforcement'))
+        if not is_nil(p.get('submission')) and subj_sub[subj] == 'NIL': subj_sub[subj] = p.get('submission')
     
     rows = []
     for subj in sorted(subj_date):
@@ -108,11 +96,11 @@ def consolidate(all_periods, friday_str, nxt_monday_str):
         rows.append({'subject': subj, 'reinf_dates': reinf_dates, 'reinf_lines': reinf_lines, 'submission': submission})
     return rows
 
+# --- 2. CORE PROCESSING LOGIC ---
 def process_pdfs(pdf_paths):
     all_periods, dates_seen = [], []
     for path in pdf_paths:
-        fname = os.path.basename(path)
-        date_hint = extract_date_from_filename(fname)
+        date_hint = extract_date_from_filename(os.path.basename(path))
         if date_hint: dates_seen.append(date_hint)
         all_periods += parse(ocr_pdf(path), date_hint or 'Unknown')
     
@@ -120,12 +108,11 @@ def process_pdfs(pdf_paths):
     if dates_seen:
         d = parse_date_str(dates_seen[0])
         if d: monday_dt = d - timedelta(days=d.weekday())
-    
     friday = fmt(monday_dt + timedelta(days=4)) if monday_dt else 'Unknown'
     nxt_mon = fmt(monday_dt + timedelta(days=7)) if monday_dt else 'Unknown'
-    
     return consolidate(all_periods, friday, nxt_mon), fmt(monday_dt) if monday_dt else 'Unknown'
 
+# --- 3. ROUTES ---
 @app.route('/')
 def index(): return render_template('index.html')
 
@@ -137,8 +124,7 @@ def process():
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
         for f in files:
             path = os.path.join(app.config['UPLOAD_FOLDER'], f.filename)
-            f.save(path)
-            saved.append(path)
+            f.save(path); saved.append(path)
         rows, week = process_pdfs(saved)
         return jsonify({'success': True, 'rows': rows, 'week': week, 'files_processed': len(saved)})
     except Exception as e:
