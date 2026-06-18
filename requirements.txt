@@ -1,6 +1,6 @@
 flask
-pdf2image
-pytesseract
 pdfplumber
-pillow
+pdf2image
+Pillow
+pytesseract
 gunicorn

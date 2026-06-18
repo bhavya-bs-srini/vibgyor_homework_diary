@@ -12,17 +12,17 @@ UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Path configuration - Adjust these to your local setup
-POPPLER_PATH = os.environ.get('POPPLER_PATH', r"C:\poppler\poppler-26.02.0\Library\bin")
-TESSERACT_CMD = os.environ.get('TESSERACT_CMD', r"C:\Program Files\Tesseract-OCR\tesseract.exe")
-if os.path.exists(TESSERACT_CMD):
+# Linux-compatible path configuration (works on Render)
+POPPLER_PATH = os.environ.get('POPPLER_PATH', None)  # None = auto-detect on Linux
+TESSERACT_CMD = os.environ.get('TESSERACT_CMD', 'tesseract')  # Linux default path
+if os.path.exists(TESSERACT_CMD) or TESSERACT_CMD != 'tesseract':
     pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD
 
 # Minimal SKIP list to avoid over-filtering
 SKIP = {'assembly', 'break', 'lunch', 'sports', 'pe', 'dance', 'music', 'yoga', 'meditation'}
 
 SUBJ_MAP = {
-    'language arts': 'Language Arts', 'literature': 'Literature', 
+    'language arts': 'Language Arts', 'literature': 'Literature',
     'ssc': 'SSC', 'math': 'Math', 'mathematics': 'Math',
     'art': 'Art', 'computer': 'Computer', 'robotics': 'Robotics',
     '2nd language -hindi': '2ND LANGUAGE - Hindi',
@@ -68,10 +68,16 @@ def pdf_to_text(path):
     text = ""
     try:
         with pdfplumber.open(path) as pdf:
-            for page in pdf.pages: text += (page.extract_text() or '') + "\n"
-    except:
-        imgs = convert_from_path(path, dpi=300, poppler_path=POPPLER_PATH)
-        for img in imgs: text += pytesseract.image_to_string(img) + "\n"
+            for page in pdf.pages:
+                text += (page.extract_text() or '') + "\n"
+    except Exception:
+        # Fallback to OCR
+        convert_kwargs = {'dpi': 300}
+        if POPPLER_PATH:
+            convert_kwargs['poppler_path'] = POPPLER_PATH
+        imgs = convert_from_path(path, **convert_kwargs)
+        for img in imgs:
+            text += pytesseract.image_to_string(img) + "\n"
     return text
 
 def parse(text, pdf_date_dt):
@@ -95,15 +101,14 @@ def consolidate_by_week(all_periods):
     for p in all_periods:
         subj = p['subject']
         reinf = p['reinforcement']
-        # LOGGING: See exactly what is being captured vs skipped
         print(f"Processing: {subj} | Reinforcement: {reinf}")
-        
+
         if is_nil(reinf) or subj.lower() in SKIP:
             continue
-        
+
         mon = monday_of(p['pdf_date'])
         week_data[mon][subj].append({'reinf': reinf, 'date': p['pdf_date']})
-    
+
     output = []
     for mon in sorted(week_data.keys()):
         rows = []
@@ -119,20 +124,37 @@ def consolidate_by_week(all_periods):
 
 @app.route('/process', methods=['POST'])
 def process():
-    files = request.files.getlist('pdfs')
     saved = []
-    all_periods = []
-    for f in files:
-        path = os.path.join(app.config['UPLOAD_FOLDER'], f.filename)
-        f.save(path)
-        saved.append(path)
-        all_periods.extend(parse(pdf_to_text(path), parse_date_from_filename(f.filename)))
-    
-    weeks = consolidate_by_week(all_periods)
-    for p in saved: os.remove(p)
-    return jsonify({'weeks': weeks})
+    try:
+        files = request.files.getlist('pdfs')
+        if not files or all(f.filename == '' for f in files):
+            return jsonify({'error': 'No files uploaded.'}), 400
+
+        all_periods = []
+        for f in files:
+            path = os.path.join(app.config['UPLOAD_FOLDER'], f.filename)
+            f.save(path)
+            saved.append(path)
+            all_periods.extend(parse(pdf_to_text(path), parse_date_from_filename(f.filename)))
+
+        weeks = consolidate_by_week(all_periods)
+        return jsonify({'weeks': weeks})
+
+    except Exception as e:
+        app.logger.exception("Error in /process")
+        return jsonify({'error': str(e)}), 500
+
+    finally:
+        # Always clean up uploaded files, even if an error occurred
+        for p in saved:
+            try:
+                os.remove(p)
+            except OSError:
+                pass
 
 @app.route('/')
-def index(): return render_template('index.html')
+def index():
+    return render_template('index.html')
 
-if __name__ == '__main__': app.run(debug=True)
+if __name__ == '__main__':
+    app.run(debug=True)
