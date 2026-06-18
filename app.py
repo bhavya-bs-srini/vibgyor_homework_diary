@@ -164,6 +164,15 @@ def process():
             except OSError:
                 pass
 
+@app.route('/health')
+def health():
+    import shutil
+    return jsonify({
+        'tesseract': shutil.which('tesseract'),
+        'pdftoppm': shutil.which('pdftoppm'),
+        'uploads_dir': os.path.exists(app.config['UPLOAD_FOLDER'])
+    })
+
 @app.route('/')
 def index():
     return render_template('index.html')
