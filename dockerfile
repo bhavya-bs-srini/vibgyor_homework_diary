@@ -1,7 +1,20 @@
 FROM python:3.11-slim
-RUN apt-get update && apt-get install -y tesseract-ocr poppler-utils && rm -rf /var/lib/apt/lists/*
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    poppler-utils \
+    tesseract-ocr \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
 WORKDIR /app
-COPY . .
-RUN mkdir -p /app/uploads && chmod 777 /app/uploads
+
+# Install Python dependencies
+COPY requirements.txt .
 RUN pip install -r requirements.txt
-CMD ["python", "app.py"]
+
+# Copy app files
+COPY . .
+
+# Start the app
+CMD ["gunicorn", "app:app"]
