@@ -2,279 +2,62 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>VIBGYOR Diary · Reinforcement Summary</title>
+<title>VIBGYOR Diary Summary</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:#0b0f1a;color:#e2e8f0;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px;gap:22px}
-
-/* ── Hero ── */
-.hero{text-align:center}
-.hero h1{font-size:1.8rem;font-weight:800;background:linear-gradient(120deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.hero p{color:#475569;margin-top:5px;font-size:.88rem}
-
-/* ── Results area – one card per week ── */
-#results-area{width:100%;max-width:860px;display:flex;flex-direction:column;gap:28px}
-
-/* ── Card ── */
-.card{background:#141928;border:1px solid #1e2a40;border-radius:16px;padding:24px;width:100%;max-width:860px}
-
-/* ── Week banner ── */
-.week-banner{background:#1a2540;border-radius:10px;padding:13px 18px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
-.week-banner h2{font-size:.95rem;font-weight:700;color:#a78bfa}
-.week-badge{font-size:.8rem;color:#60a5fa;background:#0b0f1a;border:1px solid #1e2a40;border-radius:20px;padding:3px 12px;white-space:nowrap}
-
-/* ── Table ── */
-.tbl-wrap{border-radius:10px;border:1px solid #1e2a40;overflow:hidden}
-table{width:100%;border-collapse:collapse;font-size:.87rem;table-layout:fixed}
-th{background:#0d1321;padding:11px 14px;text-align:left;font-size:.71rem;letter-spacing:.07em;text-transform:uppercase;color:#475569;border-bottom:1px solid #1e2a40}
-td{padding:12px 14px;border-bottom:1px solid #0d1321;vertical-align:top;line-height:1.65;word-wrap:break-word;white-space:normal}
-tr:last-child td{border-bottom:none}
-th:nth-child(1),td:nth-child(1){width:20%}
-th:nth-child(2),td:nth-child(2){width:20%}
-th:nth-child(3),td:nth-child(3){width:40%}
-th:nth-child(4),td:nth-child(4){width:20%}
-td.subj{font-weight:700;color:#e2e8f0}
-td.reinf-date{color:#60a5fa;font-weight:600}
-td.reinf{color:#cbd5e1}
-td.sub{color:#94a3b8}
-.date-line,.reinf-line{display:block;padding:1px 0}
-
-/* ── Stats ── */
-.stats{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
-.stat{background:#0b0f1a;border:1px solid #1e2a40;border-radius:10px;padding:10px 18px;text-align:center;flex:1;min-width:90px}
-.stat-n{font-size:1.5rem;font-weight:800;color:#60a5fa}
-.stat-l{font-size:.7rem;color:#475569;margin-top:2px}
-
-/* ── Upload steps ── */
-.steps{display:flex;width:100%;max-width:860px}
-.step{flex:1;text-align:center;padding:8px 4px;font-size:.73rem;font-weight:600;color:#334155;border-bottom:2px solid #1e2a40;transition:.3s}
+body{background:#0b0f1a;color:#e2e8f0;font-family:sans-serif;padding:32px;display:flex;flex-direction:column;align-items:center}
+.card{background:#141928;border-radius:16px;padding:24px;width:100%;max-width:860px;margin-bottom:20px}
+.btn{background:linear-gradient(120deg,#2563eb,#7c3aed);color:white;padding:15px;border:none;border-radius:12px;width:100%;cursor:pointer;font-weight:bold}
+.step{color:#334155;padding:10px;border-bottom:2px solid #1e2a40;display:inline-block}
 .step.active{color:#60a5fa;border-bottom-color:#60a5fa}
 .step.done{color:#34d399;border-bottom-color:#34d399}
-
-/* ── Upload card ── */
-.lbl{font-size:.73rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#475569;margin-bottom:12px}
-.drop{border:2px dashed #1e2a40;border-radius:12px;padding:38px 20px;text-align:center;cursor:pointer;transition:.2s;position:relative}
-.drop:hover,.drop.over{border-color:#3b82f6;background:#0d1525}
-.drop input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
-.tags{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
-.tag{display:inline-flex;align-items:center;gap:6px;background:#1e2a40;border-radius:6px;padding:4px 10px;font-size:.8rem}
-.tag button{background:none;border:none;color:#94a3b8;cursor:pointer;font-size:.9rem;line-height:1;padding:0}
-.tag button:hover{color:#f87171}
-.btn{width:100%;padding:13px;border:none;border-radius:12px;font-size:.97rem;font-weight:700;cursor:pointer;transition:.2s;margin-top:16px;background:linear-gradient(120deg,#2563eb,#7c3aed);color:#fff}
-.btn:disabled{opacity:.55;cursor:not-allowed}
-.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle;margin-right:7px}
-@keyframes sp{to{transform:rotate(360deg)}}
-.err{background:#200e0e;border:1px solid #7f1d1d;border-radius:10px;padding:10px 14px;color:#fca5a5;font-size:.84rem;margin-top:12px;display:none}
-.err.on{display:block}
-
-/* ── Mock preview banner ── */
-.mock-notice{background:#0d1a0d;border:1px solid #166534;border-radius:10px;padding:9px 16px;font-size:.78rem;color:#86efac;margin-bottom:4px;display:flex;align-items:center;gap:8px}
 </style>
 </head>
 <body>
-
-<div class="hero">
-  <h1>📓 VIBGYOR Diary · Reinforcement Summary</h1>
-  <p>Upload diary PDFs from one or more weeks — get a consolidated view per week</p>
+<h1>📓 VIBGYOR Diary Summary</h1>
+<div id="steps">
+  <span class="step active" id="s1">① Upload</span>
+  <span class="step" id="s2">② Reading...</span>
+  <span class="step" id="s3">③ Done</span>
 </div>
-
-<!-- Results: rendered dynamically, one card per week -->
+<div class="card">
+  <input type="file" id="fi" multiple accept=".pdf"/>
+  <button class="btn" id="btn" onclick="run()">Generate Summary</button>
+</div>
 <div id="results-area"></div>
 
-<!-- Progress steps -->
-<div class="steps">
-  <div class="step active" id="s1">① Upload PDFs</div>
-  <div class="step" id="s2">② Reading…</div>
-  <div class="step" id="s3">③ Done</div>
-</div>
-
-<!-- Upload card -->
-<div class="card">
-  <div class="lbl">Upload Daily Diary PDFs</div>
-  <div class="drop" id="drop">
-    <input type="file" id="fi" accept=".pdf" multiple/>
-    <p><strong>Click to browse</strong> or drag &amp; drop PDF files here</p>
-    <p style="color:#475569;font-size:.8rem;margin-top:6px">Files from multiple weeks are supported</p>
-  </div>
-  <div class="tags" id="tags"></div>
-  <button class="btn" id="btn" onclick="run()">Generate Summary</button>
-  <div class="err" id="err"></div>
-</div>
-
 <script>
-// ── Mock data (mirrors real API response shape) ───────────────────────────
-const MOCK = {
-  weeks: [
-    {
-      monday: '9 Jun 2026',
-      friday: '13 Jun 2026',
-      rows: [
-        {
-          subject: 'Language Arts',
-          reinf_dates: ['10 Jun 2026', '11 Jun 2026'],
-          reinf_lines: ['NIL', 'RWSH 2'],
-          submission: '15 Jun 2026'
-        },
-        {
-          subject: 'Literature',
-          reinf_dates: ['11 Jun 2026'],
-          reinf_lines: ['RWSH 5A 5B'],
-          submission: '15 Jun 2026'
-        },
-        {
-          subject: 'Math',
-          reinf_dates: ['10 Jun 2026'],
-          reinf_lines: ['Pg 6'],
-          submission: '13 Jun 2026'
-        },
-        {
-          subject: 'SSC',
-          reinf_dates: ['10 Jun 2026', '12 Jun 2026'],
-          reinf_lines: ['5A, 5B', '7A, 7B'],
-          submission: '15 Jun 2026'
-        }
-      ]
-    },
-    {
-      monday: '16 Jun 2026',
-      friday: '20 Jun 2026',
-      rows: [
-        {
-          subject: 'Language Arts',
-          reinf_dates: ['16 Jun 2026'],
-          reinf_lines: ['RWSH 3'],
-          submission: '22 Jun 2026'
-        },
-        {
-          subject: 'Math',
-          reinf_dates: ['17 Jun 2026', '18 Jun 2026'],
-          reinf_lines: ['Pg 8A', 'Pg 9'],
-          submission: '20 Jun 2026'
-        },
-        {
-          subject: '2ND LANGUAGE - Kannada',
-          reinf_dates: ['18 Jun 2026'],
-          reinf_lines: ['Worksheet 3'],
-          submission: '22 Jun 2026'
-        }
-      ]
-    }
-  ]
-};
-
-// ── File management ───────────────────────────────────────────────────────
-let files = [];
-const dropArea  = document.getElementById('drop');
-const fileInput = document.getElementById('fi');
-
-['dragover','dragleave','drop'].forEach(evt => dropArea.addEventListener(evt, e => {
-  e.preventDefault();
-  dropArea.classList.toggle('over', evt === 'dragover');
-  if (evt === 'drop') addFiles(e.dataTransfer.files);
-}));
-fileInput.addEventListener('change', e => addFiles(e.target.files));
-
-function addFiles(nf) {
-  Array.from(nf).forEach(f => { if (!files.find(x => x.name === f.name)) files.push(f); });
-  renderTags();
-}
-function removeFile(n) { files = files.filter(f => f.name !== n); renderTags(); }
-function renderTags() {
-  document.getElementById('tags').innerHTML = files.map(f =>
-    `<div class="tag">📄 ${f.name}<button onclick="removeFile('${f.name}')">×</button></div>`
-  ).join('');
-}
-
-// ── Main run ──────────────────────────────────────────────────────────────
 async function run() {
   const btn = document.getElementById('btn');
-  const err = document.getElementById('err');
-  if (!files.length) { alert('Please upload at least one PDF'); return; }
-
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spin"></span>Processing…';
-  err.className = 'err';
+  const files = document.getElementById('fi').files;
+  if(!files.length) return alert('Upload PDFs');
+  
+  btn.disabled = true; btn.textContent = 'Processing...';
   document.getElementById('s1').className = 'step done';
   document.getElementById('s2').className = 'step active';
 
   const fd = new FormData();
-  files.forEach(f => fd.append('pdfs', f));
+  for(let f of files) fd.append('pdfs', f);
 
   try {
-    const r = await fetch('/process', { method: 'POST', body: fd });
+    const r = await fetch('/process', {method:'POST', body:fd});
     const d = await r.json();
-    if (!r.ok) throw new Error(d.error || 'Server error');
     document.getElementById('s2').className = 'step done';
-    document.getElementById('s3').className = 'step active';
-    renderWeeks(d.weeks, false);
-  } catch(e) {
-    err.textContent = e.message;
-    err.className = 'err on';
-    btn.disabled = false;
-    btn.innerHTML = 'Generate Summary';
-    document.getElementById('s1').className = 'step active';
-    document.getElementById('s2').className = 'step';
-  }
+    document.getElementById('s3').className = 'step active done';
+    render(d.weeks);
+  } catch(e) { alert('Error: ' + e.message); }
+  btn.disabled = false; btn.textContent = 'Generate Summary';
 }
 
-// ── Render one card per week ──────────────────────────────────────────────
-function renderWeeks(weeks, isMock) {
+function render(weeks) {
   const area = document.getElementById('results-area');
-  area.innerHTML = '';
-
-  if (!weeks || !weeks.length) {
-    area.innerHTML = '<div class="card" style="color:#94a3b8;text-align:center">No reinforcement found in the uploaded PDFs.</div>';
-    return;
-  }
-
-  weeks.forEach((wk, idx) => {
-    const card = document.createElement('div');
-    card.className = 'card';
-
-    // Mock notice (first card only)
-    const mockBanner = isMock
-      ? `<div class="mock-notice">🟢 Mock preview — upload real PDFs to generate actual data</div>`
-      : '';
-
-    const rows = wk.rows.map(r => `
-      <tr>
-        <td class="subj">${r.subject}</td>
-        <td class="reinf-date">${r.reinf_dates.map(x => `<span class="date-line">${x}</span>`).join('')}</td>
-        <td class="reinf">${r.reinf_lines.map(x => `<span class="reinf-line">${x}</span>`).join('')}</td>
-        <td class="sub">${r.submission}</td>
-      </tr>`).join('');
-
-    card.innerHTML = `
-      ${mockBanner}
-      <div class="week-banner">
-        <h2>📋 Week commencing Monday &nbsp;<span style="color:#e2e8f0;font-size:1rem;font-weight:800">${wk.monday}</span></h2>
-        <span class="week-badge">Due by Fri ${wk.friday}</span>
-      </div>
-      <div class="tbl-wrap">
-        <table>
-          <thead><tr>
-            <th>Subject</th>
-            <th>Reinforcement Date</th>
-            <th>Consolidated Reinforcement</th>
-            <th>Submission Date</th>
-          </tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
-      <div class="stats">
-        <div class="stat"><div class="stat-n">${wk.rows.length}</div><div class="stat-l">Subjects</div></div>
-        <div class="stat"><div class="stat-n">${wk.rows.filter(r => r.reinf_lines.some(l => l && l.toUpperCase() !== 'NIL')).length}</div><div class="stat-l">With Reinforcement</div></div>
-      </div>`;
-
-    area.appendChild(card);
-  });
-
-  area.scrollIntoView({ behavior: 'smooth' });
+  area.innerHTML = weeks.map(wk => `
+    <div class="card">
+      <h2>Week of ${wk.monday}</h2>
+      <table width="100%">
+        ${wk.rows.map(r => `<tr><td>${r.subject}</td><td>${r.reinf_lines.join(', ')}</td><td>${r.submission}</td></tr>`).join('')}
+      </table>
+    </div>`).join('');
 }
-
-// ── Show mock on load ─────────────────────────────────────────────────────
-renderWeeks(MOCK.weeks, true);
 </script>
 </body>
 </html>
