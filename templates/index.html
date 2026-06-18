@@ -2,61 +2,97 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>VIBGYOR Diary Summary</title>
 <style>
-body{background:#0b0f1a;color:#e2e8f0;font-family:sans-serif;padding:32px;display:flex;flex-direction:column;align-items:center}
-.card{background:#141928;border-radius:16px;padding:24px;width:100%;max-width:860px;margin-bottom:20px}
-.btn{background:linear-gradient(120deg,#2563eb,#7c3aed);color:white;padding:15px;border:none;border-radius:12px;width:100%;cursor:pointer;font-weight:bold}
-.step{color:#334155;padding:10px;border-bottom:2px solid #1e2a40;display:inline-block}
-.step.active{color:#60a5fa;border-bottom-color:#60a5fa}
-.step.done{color:#34d399;border-bottom-color:#34d399}
+    body { background: #0b0f1a; color: #e2e8f0; font-family: 'Segoe UI', sans-serif; padding: 40px 20px; display: flex; flex-direction: column; align-items: center; }
+    .card { background: #141928; border: 1px solid #1e2a40; border-radius: 16px; padding: 24px; width: 100%; max-width: 900px; margin-bottom: 20px; }
+    h1 { margin-bottom: 20px; color: #60a5fa; }
+    .btn { background: linear-gradient(120deg, #2563eb, #7c3aed); color: white; padding: 15px 30px; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; width: 100%; max-width: 300px; }
+    .btn:disabled { opacity: 0.6; }
+    .step { color: #334155; padding: 10px; font-weight: bold; }
+    .step.active { color: #60a5fa; }
+    .step.done { color: #34d399; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th { text-align: left; color: #475569; border-bottom: 1px solid #1e2a40; padding: 10px; }
+    td { padding: 12px 10px; border-bottom: 1px solid #1e2a40; }
 </style>
 </head>
 <body>
+
 <h1>📓 VIBGYOR Diary Summary</h1>
+
 <div id="steps">
-  <span class="step active" id="s1">① Upload</span>
-  <span class="step" id="s2">② Reading...</span>
-  <span class="step" id="s3">③ Done</span>
+    <span class="step active" id="s1">① Upload</span>
+    <span class="step" id="s2">② Processing...</span>
+    <span class="step" id="s3">③ Done</span>
 </div>
+
 <div class="card">
-  <input type="file" id="fi" multiple accept=".pdf"/>
-  <button class="btn" id="btn" onclick="run()">Generate Summary</button>
+    <input type="file" id="fi" multiple accept=".pdf"/>
+    <button class="btn" id="btn" onclick="run()">Generate Summary</button>
 </div>
+
 <div id="results-area"></div>
 
 <script>
 async function run() {
-  const btn = document.getElementById('btn');
-  const files = document.getElementById('fi').files;
-  if(!files.length) return alert('Upload PDFs');
-  
-  btn.disabled = true; btn.textContent = 'Processing...';
-  document.getElementById('s1').className = 'step done';
-  document.getElementById('s2').className = 'step active';
+    const btn = document.getElementById('btn');
+    const files = document.getElementById('fi').files;
+    const area = document.getElementById('results-area');
+    
+    if(!files.length) { alert('Please select PDF files first.'); return; }
+    
+    area.innerHTML = ''; 
+    btn.disabled = true; 
+    btn.textContent = 'Processing...';
+    document.getElementById('s1').className = 'step done';
+    document.getElementById('s2').className = 'step active';
 
-  const fd = new FormData();
-  for(let f of files) fd.append('pdfs', f);
+    const fd = new FormData();
+    for(let f of files) fd.append('pdfs', f);
 
-  try {
-    const r = await fetch('/process', {method:'POST', body:fd});
-    const d = await r.json();
-    document.getElementById('s2').className = 'step done';
-    document.getElementById('s3').className = 'step active done';
-    render(d.weeks);
-  } catch(e) { alert('Error: ' + e.message); }
-  btn.disabled = false; btn.textContent = 'Generate Summary';
+    try {
+        const r = await fetch('/process', { method: 'POST', body: fd });
+        const d = await r.json();
+        
+        document.getElementById('s2').className = 'step done';
+        document.getElementById('s3').className = 'step active done';
+        
+        if (d.weeks && d.weeks.length > 0) {
+            render(d.weeks);
+        } else {
+            area.innerHTML = '<div class="card">No reinforcement data found in the selected files.</div>';
+        }
+    } catch(e) {
+        alert('Error: ' + e.message);
+        document.getElementById('s2').className = 'step';
+    }
+    btn.disabled = false; 
+    btn.textContent = 'Generate Summary';
 }
 
 function render(weeks) {
-  const area = document.getElementById('results-area');
-  area.innerHTML = weeks.map(wk => `
-    <div class="card">
-      <h2>Week of ${wk.monday}</h2>
-      <table width="100%">
-        ${wk.rows.map(r => `<tr><td>${r.subject}</td><td>${r.reinf_lines.join(', ')}</td><td>${r.submission}</td></tr>`).join('')}
-      </table>
-    </div>`).join('');
+    const area = document.getElementById('results-area');
+    area.innerHTML = weeks.map(wk => `
+        <div class="card">
+            <h2>Week of ${wk.monday}</h2>
+            <table>
+                <thead>
+                    <tr><th>Subject</th><th>Reinforcement</th><th>Submission Date</th></tr>
+                </thead>
+                <tbody>
+                    ${wk.rows.map(r => `
+                        <tr>
+                            <td><b>${r.subject}</b></td>
+                            <td>${r.reinf_lines.join(', ')}</td>
+                            <td>${r.submission}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `).join('');
 }
 </script>
 </body>
