@@ -3,6 +3,7 @@ from flask import Flask, request, jsonify, render_template
 from pdf2image import convert_from_path
 from PIL import Image, ImageOps
 import pytesseract
+import pdfplumber
 from collections import defaultdict
 from datetime import datetime, timedelta
 
@@ -11,16 +12,18 @@ UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-pytesseract.pytesseract.tesseract_cmd = os.getenv('TESSERACT_CMD', '/usr/bin/tesseract')
+POPPLER_PATH = os.environ.get('POPPLER_PATH', r"C:\poppler\poppler-26.02.0\Library\bin")
+TESSERACT_CMD = os.environ.get('TESSERACT_CMD', r"C:\Program Files\Tesseract-OCR\tesseract.exe")
+if os.path.exists(TESSERACT_CMD):
+    pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD
 
-# ── Subjects to skip ─────────────────────────────────────────────────────────
 SKIP = {
     'assembly', 'spark', 'library', 'skill', 'enrichment',
     'language arts(support)', 'literature(support)',
-    'math-support', 'math support', 'public speaking'
+    'math-support', 'math support', 'public speaking',
+    'break', 'lunch', 'sports', 'pe', 'dance', 'music', 'yoga', 'meditation'
 }
 
-# ── Canonical subject names ──────────────────────────────────────────────────
 SUBJ_MAP = {
     'language arts': 'Language Arts', 'language art': 'Language Arts',
     'literature': 'Literature', 'ssc': 'SSC',
@@ -36,40 +39,50 @@ SUBJ_MAP = {
     '2ndlanguage-kannada':    '2ND LANGUAGE - Kannada',
     'kannada 2nd language':   '2ND LANGUAGE - Kannada',
     'kannada 2nd':            '2ND LANGUAGE - Kannada',
-    '3rd language-hindi':    '3RD LANGUAGE - Hindi',
-    '3rd language -hindi':   '3RD LANGUAGE - Hindi',
-    '3rdlanguage-hindi':     '3RD LANGUAGE - Hindi',
-    '3rd language - hindi':  '3RD LANGUAGE - Hindi',
-    'srdlanguage-hindi':     '3RD LANGUAGE - Hindi',
-    '3rd language-kannada':  '3RD LANGUAGE - Kannada',
-    '3rdlanguage-kannada':   '3RD LANGUAGE - Kannada',
-    '3rd language - kannada':'3RD LANGUAGE - Kannada',
-    'srdlanguagekannada':    '3RD LANGUAGE - Kannada',
+    '3rd language-hindi':     '3RD LANGUAGE - Hindi',
+    '3rd language -hindi':    '3RD LANGUAGE - Hindi',
+    '3rdlanguage-hindi':      '3RD LANGUAGE - Hindi',
+    '3rd language - hindi':   '3RD LANGUAGE - Hindi',
+    'srdlanguage-hindi':      '3RD LANGUAGE - Hindi',
+    '3rd language-kannada':   '3RD LANGUAGE - Kannada',
+    '3rdlanguage-kannada':    '3RD LANGUAGE - Kannada',
+    '3rd language - kannada': '3RD LANGUAGE - Kannada',
+    'srdlanguagekannada':     '3RD LANGUAGE - Kannada',
 }
+
+OCR_NOISE = re.compile(
+    r'^(nil|nii|nls|nl|n|l|\xe2\x80\x94|—|-|null|\.|n/a|bi|bs|by|ee|ca|we|a|st|al|ose|kil|cst|sxt|\s*)$',
+    re.IGNORECASE
+)
 
 def norm_subj(s):
     s = re.sub(r'[\[\]_=\|\\,\(\)]+', ' ', s.strip().lower())
     s = re.sub(r'\s+', ' ', s).strip()
-    return SUBJ_MAP.get(s, s.title())
+    for k, v in SUBJ_MAP.items():
+        if k in s:
+            return v
+    for k, v in SUBJ_MAP.items():
+        if len(s) > 3 and (s in k or k.startswith(s[1:]) or k in s):
+            return v
+    return s.title()
 
 def is_nil(v):
-    return bool(re.match(
-        r'^(nil|nii|nls|nl|—|-|null|\.|n/a|bi|bs|by|ee|ca|we|cst|\s*)$',
-        str(v).strip(), re.IGNORECASE
-    ))
+    if not v:
+        return True
+    return bool(OCR_NOISE.match(v.strip()))
 
-def clean(v):
+def clean_val(v):
     v = re.sub(r'^[\[\|\\=_\-:\s]+', '', str(v))
-    v = re.sub(r'[\[\|\\=_\-—~\s]+$', '', v)
+    v = re.sub(r'[\[\|\\=_\-~\s]+$', '', v)
     return v.strip()
 
-# ── Date helpers ─────────────────────────────────────────────────────────────
+def clean_reinf(v):
+    v = clean_val(v)
+    v = re.sub(r'[-]+$', '', v).strip()
+    v = re.sub(r'^[^A-Za-z0-9]+', '', v)
+    return v
 
 def parse_date_from_filename(basename):
-    """
-    Handles filenames like: Daily_Diary_Communication_3A_10_06_26.pdf
-    Extracts the last three numeric groups as DD, MM, YY/YYYY.
-    """
     m = re.search(r'(\d{1,2})[_.](\d{1,2})[_.](\d{2,4})(?:\D|$)', basename)
     if not m:
         return None
@@ -93,25 +106,28 @@ def friday_of(monday_dt):
 def next_monday(monday_dt):
     return monday_dt + timedelta(days=7)
 
-# ── OCR ──────────────────────────────────────────────────────────────────────
+def extract_text(path):
+    try:
+        with pdfplumber.open(path) as pdf:
+            text = '\n'.join(p.extract_text() or '' for p in pdf.pages)
+            if len(text.strip()) > 100:
+                return True, text
+    except Exception:
+        pass
+    return False, ''
 
 def ocr_pdf(path):
-    imgs = convert_from_path(path, dpi=200)
+    try:
+        imgs = convert_from_path(path, dpi=300, poppler_path=POPPLER_PATH)
+    except Exception:
+        imgs = convert_from_path(path, dpi=300)
     text = ''
     for img in imgs:
-        text += pytesseract.image_to_string(
-            ImageOps.autocontrast(img.convert('L')),
-            config='--psm 4 --oem 1'
-        ) + '\n'
+        img2 = ImageOps.autocontrast(img.convert('L'))
+        text += pytesseract.image_to_string(img2, config='--psm 4 --oem 1') + '\n'
     return text
 
-# ── Parse one PDF's OCR text ─────────────────────────────────────────────────
-
 def parse(text, pdf_date_dt):
-    """
-    Returns list of dicts: { pdf_date, subject, reinforcement }
-    Submission date is intentionally NOT read from the PDF.
-    """
     periods = []
     cur = None
     pending_header = None
@@ -120,10 +136,11 @@ def parse(text, pdf_date_dt):
         line = raw_line.strip()
         if not line:
             continue
+
         if re.match(r'^(Sub\s*Topic|Topic|CW|Words\s+for|Additional|GROUP)', line, re.IGNORECASE):
             continue
 
-        if re.match(r'^Period\s*[-–]\s*\d+', line, re.IGNORECASE):
+        if re.match(r'^Period\s*[-:]\s*\d+', line, re.IGNORECASE):
             if cur and cur.get('subject'):
                 periods.append(cur)
             cur = {'pdf_date': pdf_date_dt, 'subject': '', 'reinforcement': 'NIL'}
@@ -137,44 +154,45 @@ def parse(text, pdf_date_dt):
         m_reinf = re.match(r'^Reinforce?ment\s*(.*)', line, re.IGNORECASE)
 
         if m_subj:
-            val = clean(m_subj.group(1))
-            if val: cur['subject'] = norm_subj(val)
-            else:   pending_header = 'subject'
+            val = clean_val(m_subj.group(1))
+            if val:
+                cur['subject'] = norm_subj(val)
+            else:
+                pending_header = 'subject'
             continue
 
         if m_reinf:
-            val = clean(m_reinf.group(1))
-            if val: cur['reinforcement'] = val
-            else:   pending_header = 'reinforcement'
+            val = clean_reinf(m_reinf.group(1))
+            if val and not is_nil(val):
+                cur['reinforcement'] = val
+            else:
+                pending_header = 'reinforcement'
             continue
 
         if pending_header:
-            val = clean(line)
+            val = clean_val(line)
             if not is_nil(val):
-                if pending_header == 'subject':       cur['subject'] = norm_subj(val)
-                elif pending_header == 'reinforcement': cur['reinforcement'] = val
+                if pending_header == 'subject':
+                    cur['subject'] = norm_subj(val)
+                elif pending_header == 'reinforcement':
+                    cur['reinforcement'] = val
             pending_header = None
 
     if cur and cur.get('subject'):
         periods.append(cur)
     return periods
 
-# ── Consolidate periods into rows, grouped by week ───────────────────────────
+def process_pdfs(pdf_paths):
+    all_periods = []
+    for path in pdf_paths:
+        pdf_date_dt = parse_date_from_filename(os.path.basename(path)) or datetime.today()
+        has_text, text = extract_text(path)
+        if not has_text:
+            text = ocr_pdf(path)
+        all_periods += parse(text, pdf_date_dt)
+    return all_periods
 
 def consolidate_by_week(all_periods):
-    """
-    Groups periods by the ISO Monday of their pdf_date.
-    Returns a list of week-blocks, each:
-      {
-        'monday':  '9 Jun 2026',
-        'friday':  '13 Jun 2026',
-        'rows': [
-          { subject, reinf_dates: [...], reinf_lines: [...], submission }
-        ]
-      }
-    sorted oldest week first.
-    """
-    # week_key (monday datetime) → subj → date_str → [reinf, ...]
     week_data = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
     seen = set()
 
@@ -182,13 +200,17 @@ def consolidate_by_week(all_periods):
         subj = p.get('subject', '').strip()
         if not subj or subj.lower() in SKIP or len(subj) < 2:
             continue
-        if is_nil(p.get('reinforcement')):
+
+        reinf = p.get('reinforcement', '')
+        if is_nil(reinf):
             continue
 
         pdf_dt   = p['pdf_date']
         mon_dt   = monday_of(pdf_dt)
         date_key = fmt_dt(pdf_dt)
-        reinf    = p['reinforcement']
+        reinf    = clean_reinf(reinf)
+        if is_nil(reinf):
+            continue
 
         dedup = (mon_dt, subj, reinf, date_key)
         if dedup in seen:
@@ -197,8 +219,8 @@ def consolidate_by_week(all_periods):
         week_data[mon_dt][subj][date_key].append(reinf)
 
     def sort_date_key(ds):
-        for fmt in ('%-d %b %Y', '%d %b %Y'):
-            try: return datetime.strptime(ds, fmt)
+        for f in ('%-d %b %Y', '%d %b %Y'):
+            try: return datetime.strptime(ds, f)
             except: pass
         return datetime.min
 
@@ -226,8 +248,6 @@ def consolidate_by_week(all_periods):
         })
     return weeks
 
-# ── Flask routes ──────────────────────────────────────────────────────────────
-
 @app.route('/process', methods=['POST'])
 def process():
     files = request.files.getlist('pdfs')
@@ -238,13 +258,9 @@ def process():
             f.save(path)
             saved.append(path)
 
-        all_periods = []
-        for path in saved:
-            pdf_date_dt = parse_date_from_filename(os.path.basename(path)) or datetime.today()
-            text = ocr_pdf(path)
-            all_periods += parse(text, pdf_date_dt)
-
+        all_periods = process_pdfs(saved)
         weeks = consolidate_by_week(all_periods)
+
         return jsonify({'success': True, 'weeks': weeks, 'files_processed': len(saved)})
 
     except Exception as e:
@@ -252,11 +268,13 @@ def process():
         return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
     finally:
         for p in saved:
-            if os.path.exists(p): os.remove(p)
+            if os.path.exists(p):
+                os.remove(p)
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    os.makedirs('uploads', exist_ok=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
