@@ -54,10 +54,22 @@ def clean_reinf(v):
     return re.sub(r'^[^A-Za-z0-9]+', '', v)
 
 def parse_date_from_filename(basename):
+    # Try numeric format: 18.06.2026 or 18_06_2026
     m = re.search(r'(\d{1,2})[_.](\d{1,2})[_.](\d{2,4})', basename)
-    if not m: return datetime.today()
-    day, mon, yr = m.groups()
-    return datetime(int('20'+yr if len(yr)==2 else yr), int(mon), int(day))
+    if m:
+        day, mon, yr = m.groups()
+        return datetime(int('20'+yr if len(yr)==2 else yr), int(mon), int(day))
+    
+    # Try format: 18-Jun-26 or 18-Jun-2026
+    m2 = re.search(r'(\d{1,2})-([A-Za-z]{3})-(\d{2,4})', basename)
+    if m2:
+        day, mon_str, yr = m2.groups()
+        return datetime.strptime(
+            f"{day}-{mon_str}-{'20'+yr if len(yr)==2 else yr}",
+            "%d-%b-%Y"
+        )
+    
+    return datetime.today()
 
 def fmt_dt(dt): return dt.strftime('%d %b %Y')
 def monday_of(dt): return dt - timedelta(days=dt.weekday())
