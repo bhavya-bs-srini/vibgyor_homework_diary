@@ -8,8 +8,8 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-        background: #070b14;
-        color: #e2e8f0;
+        background: #f0f4f8;
+        color: #1e293b;
         font-family: 'Segoe UI', sans-serif;
         min-height: 100vh;
         display: flex;
@@ -18,16 +18,13 @@
         padding: 40px 20px;
     }
 
-    /* Animated background */
     body::before {
         content: '';
         position: fixed;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: radial-gradient(ellipse at 20% 20%, rgba(37,99,235,0.08) 0%, transparent 50%),
-                    radial-gradient(ellipse at 80% 80%, rgba(124,58,237,0.08) 0%, transparent 50%);
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: radial-gradient(ellipse at 15% 10%, rgba(37,99,235,0.07) 0%, transparent 50%),
+                    radial-gradient(ellipse at 85% 90%, rgba(124,58,237,0.06) 0%, transparent 50%);
         z-index: 0;
         pointer-events: none;
     }
@@ -36,7 +33,7 @@
         position: relative;
         z-index: 1;
         width: 100%;
-        max-width: 960px;
+        max-width: 980px;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -45,18 +42,15 @@
     /* Header */
     .header {
         text-align: center;
-        margin-bottom: 36px;
+        margin-bottom: 32px;
     }
 
-    .header .logo {
-        font-size: 2.8rem;
-        margin-bottom: 8px;
-    }
+    .header .logo { font-size: 2.8rem; margin-bottom: 8px; }
 
     .header h1 {
-        font-size: 1.9rem;
-        font-weight: 700;
-        background: linear-gradient(120deg, #60a5fa, #a78bfa, #60a5fa);
+        font-size: 2rem;
+        font-weight: 800;
+        background: linear-gradient(120deg, #1d4ed8, #7c3aed, #1d4ed8);
         background-size: 200%;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
@@ -76,31 +70,31 @@
 
     /* Upload card */
     .upload-card {
-        background: linear-gradient(145deg, #0f1629, #141928);
-        border: 1px solid #1e2d4a;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
         border-radius: 20px;
         padding: 32px;
         width: 100%;
         margin-bottom: 28px;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        box-shadow: 0 4px 24px rgba(0,0,0,0.07);
     }
 
     /* Drop zone */
     .drop-zone {
-        border: 2px dashed #1e3a5f;
+        border: 2px dashed #bfdbfe;
         border-radius: 14px;
         padding: 36px 20px;
         text-align: center;
         cursor: pointer;
         transition: all 0.3s ease;
-        background: rgba(37,99,235,0.03);
+        background: #eff6ff;
         margin-bottom: 20px;
         position: relative;
     }
 
     .drop-zone:hover, .drop-zone.dragover {
         border-color: #3b82f6;
-        background: rgba(37,99,235,0.08);
+        background: #dbeafe;
     }
 
     .drop-zone input[type="file"] {
@@ -113,9 +107,9 @@
     }
 
     .drop-zone .icon { font-size: 2.4rem; margin-bottom: 10px; }
-    .drop-zone .label { color: #94a3b8; font-size: 0.95rem; }
-    .drop-zone .label span { color: #60a5fa; font-weight: 600; }
-    .drop-zone .file-list { margin-top: 12px; color: #60a5fa; font-size: 0.9rem; font-weight: 500; }
+    .drop-zone .label { color: #475569; font-size: 0.95rem; }
+    .drop-zone .label span { color: #2563eb; font-weight: 600; }
+    .drop-zone .file-list { margin-top: 12px; color: #2563eb; font-size: 0.9rem; font-weight: 500; }
 
     /* Steps */
     .steps {
@@ -133,33 +127,33 @@
         border-radius: 20px;
         font-size: 0.82rem;
         font-weight: 600;
-        color: #334155;
-        background: rgba(255,255,255,0.03);
-        border: 1px solid #1e2a40;
+        color: #94a3b8;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
         transition: all 0.3s ease;
     }
 
     .step .dot {
         width: 7px; height: 7px;
         border-radius: 50%;
-        background: #334155;
+        background: #cbd5e1;
         transition: all 0.3s ease;
     }
 
     .step.active {
-        color: #60a5fa;
-        border-color: #2563eb;
-        background: rgba(37,99,235,0.1);
+        color: #1d4ed8;
+        border-color: #93c5fd;
+        background: #eff6ff;
     }
 
     .step.active .dot {
-        background: #60a5fa;
-        box-shadow: 0 0 6px #60a5fa;
+        background: #3b82f6;
+        box-shadow: 0 0 6px #93c5fd;
         animation: pulse 1s infinite;
     }
 
-    .step.done { color: #34d399; border-color: #065f46; background: rgba(52,211,153,0.07); }
-    .step.done .dot { background: #34d399; }
+    .step.done { color: #059669; border-color: #6ee7b7; background: #ecfdf5; }
+    .step.done .dot { background: #10b981; }
 
     @keyframes pulse {
         0%, 100% { opacity: 1; }
@@ -179,26 +173,20 @@
         width: 100%;
         letter-spacing: 0.3px;
         transition: all 0.3s ease;
-        box-shadow: 0 4px 20px rgba(37,99,235,0.3);
-        position: relative;
-        overflow: hidden;
+        box-shadow: 0 4px 16px rgba(37,99,235,0.25);
     }
 
     .btn:hover:not(:disabled) {
         transform: translateY(-1px);
-        box-shadow: 0 6px 28px rgba(37,99,235,0.45);
+        box-shadow: 0 6px 24px rgba(37,99,235,0.35);
     }
 
-    .btn:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-        transform: none;
-    }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
     .btn .spinner {
         display: inline-block;
         width: 16px; height: 16px;
-        border: 2px solid rgba(255,255,255,0.3);
+        border: 2px solid rgba(255,255,255,0.4);
         border-top-color: white;
         border-radius: 50%;
         animation: spin 0.7s linear infinite;
@@ -212,12 +200,12 @@
     #results-area { width: 100%; }
 
     .week-card {
-        background: linear-gradient(145deg, #0f1629, #141928);
-        border: 1px solid #1e2d4a;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
         border-radius: 20px;
         padding: 28px;
         margin-bottom: 20px;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.06);
         animation: fadeUp 0.4s ease forwards;
     }
 
@@ -233,100 +221,127 @@
         margin-bottom: 20px;
         flex-wrap: wrap;
         gap: 10px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid #e2e8f0;
     }
 
     .week-title {
         font-size: 1.15rem;
-        font-weight: 700;
-        color: #60a5fa;
+        font-weight: 800;
+        color: #1d4ed8;
     }
 
     .week-range {
         font-size: 0.8rem;
-        color: #475569;
-        background: rgba(255,255,255,0.04);
-        border: 1px solid #1e2a40;
+        color: #64748b;
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
         padding: 4px 12px;
         border-radius: 20px;
+        font-weight: 600;
     }
 
     table {
         width: 100%;
-        border-collapse: collapse;
+        border-collapse: separate;
+        border-spacing: 0;
     }
 
-    thead tr {
-        background: rgba(37,99,235,0.08);
-        border-radius: 8px;
-    }
+    thead tr { background: #f8fafc; }
 
     th {
         text-align: left;
-        color: #475569;
-        font-size: 0.78rem;
+        color: #64748b;
+        font-size: 0.75rem;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.8px;
-        padding: 10px 14px;
-        border-bottom: 1px solid #1e2a40;
+        letter-spacing: 1px;
+        padding: 10px 16px;
+        border-bottom: 2px solid #e2e8f0;
     }
 
+    th:first-child { border-radius: 8px 0 0 0; }
+    th:last-child { border-radius: 0 8px 0 0; }
+
     td {
-        padding: 13px 14px;
-        border-bottom: 1px solid #111827;
-        font-size: 0.92rem;
-        vertical-align: top;
+        padding: 16px;
+        font-size: 0.93rem;
+        vertical-align: middle;
+        color: #1e293b;
+        border-bottom: 1px solid #f1f5f9;
+        background: #ffffff;
+    }
+
+    /* Alternating row tint */
+    tbody tr:nth-child(even) td { background: #f8fafc; }
+
+    /* Strong row divider between subjects */
+    tbody tr td {
+        border-bottom: 2px solid #e2e8f0;
     }
 
     tbody tr:last-child td { border-bottom: none; }
 
-    tbody tr:hover { background: rgba(255,255,255,0.02); }
+    tbody tr:hover td { background: #eff6ff; }
 
     .subject-badge {
         display: inline-block;
-        background: linear-gradient(120deg, rgba(37,99,235,0.2), rgba(124,58,237,0.2));
-        border: 1px solid rgba(96,165,250,0.2);
-        color: #93c5fd;
-        padding: 3px 10px;
-        border-radius: 6px;
-        font-weight: 600;
+        background: linear-gradient(120deg, #dbeafe, #ede9fe);
+        border: 1px solid #bfdbfe;
+        color: #1d4ed8;
+        padding: 5px 12px;
+        border-radius: 8px;
+        font-weight: 700;
         font-size: 0.88rem;
     }
 
-    .reinf-text { color: #cbd5e1; line-height: 1.5; }
+    .reinf-text {
+        color: #0f172a;
+        line-height: 1.6;
+        font-weight: 500;
+    }
+
+    .reinf-line {
+        display: block;
+        padding: 3px 0;
+        border-bottom: 1px dashed #e2e8f0;
+    }
+
+    .reinf-line:last-child { border-bottom: none; }
 
     .submission-badge {
         display: inline-block;
-        background: rgba(52,211,153,0.1);
-        border: 1px solid rgba(52,211,153,0.2);
-        color: #6ee7b7;
-        padding: 3px 10px;
-        border-radius: 6px;
+        background: #ecfdf5;
+        border: 1px solid #6ee7b7;
+        color: #065f46;
+        padding: 5px 12px;
+        border-radius: 8px;
         font-size: 0.85rem;
+        font-weight: 700;
         white-space: nowrap;
     }
 
     /* Error */
     .error-card {
-        background: #1a0a0a;
-        border: 1px solid #7f1d1d;
+        background: #fff1f2;
+        border: 1px solid #fecdd3;
         border-radius: 16px;
         padding: 24px;
         width: 100%;
         margin-bottom: 20px;
-        color: #fca5a5;
+        color: #be123c;
         animation: fadeUp 0.3s ease forwards;
     }
 
-    .error-card h3 { margin-bottom: 8px; color: #f87171; }
-    .error-card code { font-size: 0.88rem; word-break: break-word; }
+    .error-card h3 { margin-bottom: 8px; color: #9f1239; }
+    .error-card code { font-size: 0.88rem; word-break: break-word; color: #be123c; }
 
     .empty-card {
         text-align: center;
-        padding: 40px;
-        color: #475569;
-        background: linear-gradient(145deg, #0f1629, #141928);
-        border: 1px solid #1e2d4a;
+        padding: 48px;
+        color: #94a3b8;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
         border-radius: 20px;
     }
 
@@ -404,11 +419,10 @@ async function run() {
     btn.innerHTML = '<span class="spinner"></span> Processing...';
     setStep(2);
 
-    // Move upload card back above results
+    // Move upload card back above results (in case it was moved down)
     const wrapper = document.querySelector('.page-wrapper');
     const uploadCard = document.querySelector('.upload-card');
-    const resultsArea = document.getElementById('results-area');
-    wrapper.insertBefore(uploadCard, resultsArea);
+    wrapper.insertBefore(uploadCard, area);
 
     const fd = new FormData();
     for (let f of files) fd.append('pdfs', f);
@@ -436,12 +450,9 @@ async function run() {
         if (d.weeks && d.weeks.length > 0) {
             render(d.weeks);
             // Move upload card below results
-            const wrapper = document.querySelector('.page-wrapper');
-            const uploadCard = document.querySelector('.upload-card');
             wrapper.appendChild(uploadCard);
-            // Scroll to top of results
             setTimeout(() => {
-                document.getElementById('results-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                area.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 100);
         } else {
             area.innerHTML = `
@@ -479,16 +490,20 @@ function render(weeks) {
             <table>
                 <thead>
                     <tr>
-                        <th>Subject</th>
-                        <th>Reinforcement</th>
-                        <th>Submission Date</th>
+                        <th style="width:22%">Subject</th>
+                        <th style="width:52%">Reinforcement</th>
+                        <th style="width:26%">Submission Date</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${wk.rows.map(r => `
                         <tr>
                             <td><span class="subject-badge">${r.subject}</span></td>
-                            <td><div class="reinf-text">${r.reinf_lines.join('<br/>')}</div></td>
+                            <td>
+                                <div class="reinf-text">
+                                    ${r.reinf_lines.map(line => `<span class="reinf-line">${line}</span>`).join('')}
+                                </div>
+                            </td>
                             <td><span class="submission-badge">📌 ${r.submission}</span></td>
                         </tr>
                     `).join('')}
