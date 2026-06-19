@@ -404,6 +404,12 @@ async function run() {
     btn.innerHTML = '<span class="spinner"></span> Processing...';
     setStep(2);
 
+    // Move upload card back above results
+    const wrapper = document.querySelector('.page-wrapper');
+    const uploadCard = document.querySelector('.upload-card');
+    const resultsArea = document.getElementById('results-area');
+    wrapper.insertBefore(uploadCard, resultsArea);
+
     const fd = new FormData();
     for (let f of files) fd.append('pdfs', f);
 
@@ -429,7 +435,11 @@ async function run() {
 
         if (d.weeks && d.weeks.length > 0) {
             render(d.weeks);
-            // Scroll results to top
+            // Move upload card below results
+            const wrapper = document.querySelector('.page-wrapper');
+            const uploadCard = document.querySelector('.upload-card');
+            wrapper.appendChild(uploadCard);
+            // Scroll to top of results
             setTimeout(() => {
                 document.getElementById('results-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 100);
