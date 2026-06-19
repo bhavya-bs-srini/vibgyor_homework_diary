@@ -2,5 +2,5 @@ flask
 pdfplumber
 pdf2image
 Pillow
-pytesseract
+requests
 gunicorn
