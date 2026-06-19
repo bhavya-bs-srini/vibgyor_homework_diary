@@ -1,10 +1,11 @@
-import os, re, base64, requests
+import os, re, base64
 from io import BytesIO
 from flask import Flask, request, jsonify, render_template
 from pdf2image import convert_from_path
 from PIL import Image
 from collections import defaultdict
 from datetime import datetime, timedelta
+import requests
 
 app = Flask(__name__)
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
@@ -12,8 +13,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 POPPLER_PATH = os.environ.get('POPPLER_PATH', None)
-GOOGLE_VISION_API_KEY = os.environ.get('GOOGLE_VISION_API_KEY', '')
-VISION_URL = f"https://vision.googleapis.com/v1/images:annotate?key={GOOGLE_VISION_API_KEY}"
+MISTRAL_API_KEY = os.environ.get('MISTRAL_API_KEY', '')
 
 SKIP = {
     'assembly', 'break', 'lunch', 'sports', 'pe', 'dance',
@@ -77,42 +77,43 @@ def monday_of(dt): return dt - timedelta(days=dt.weekday())
 def friday_of(mon): return mon + timedelta(days=4)
 def next_monday(mon): return mon + timedelta(days=7)
 
-def image_to_base64(img):
-    buf = BytesIO()
-    img.save(buf, format='JPEG', quality=95)
-    return base64.b64encode(buf.getvalue()).decode('utf-8')
+def pdf_to_base64(path):
+    """Convert PDF to base64 string for Mistral API."""
+    with open(path, 'rb') as f:
+        return base64.b64encode(f.read()).decode('utf-8')
 
-def google_vision_ocr(b64_image):
-    """Send image to Google Vision API and return full text."""
-    payload = {
-        "requests": [{
-            "image": {"content": b64_image},
-            "features": [{"type": "DOCUMENT_TEXT_DETECTION"}]
-        }]
+def mistral_ocr(path):
+    """Send PDF directly to Mistral OCR API and return extracted text."""
+    b64_pdf = pdf_to_base64(path)
+
+    headers = {
+        'Authorization': f'Bearer {MISTRAL_API_KEY}',
+        'Content-Type': 'application/json'
     }
-    resp = requests.post(VISION_URL, json=payload, timeout=30)
+
+    payload = {
+        "model": "mistral-ocr-latest",
+        "document": {
+            "type": "document_url",
+            "document_url": f"data:application/pdf;base64,{b64_pdf}"
+        }
+    }
+
+    resp = requests.post(
+        'https://api.mistral.ai/v1/ocr',
+        headers=headers,
+        json=payload,
+        timeout=60
+    )
     resp.raise_for_status()
     result = resp.json()
 
-    # Extract full text from response
-    try:
-        return result['responses'][0]['fullTextAnnotation']['text']
-    except (KeyError, IndexError):
-        return ''
-
-def pdf_to_text(path):
-    """Convert PDF pages to images, send each to Google Vision OCR."""
-    convert_kwargs = {'dpi': 200, 'fmt': 'jpeg'}
-    if POPPLER_PATH:
-        convert_kwargs['poppler_path'] = POPPLER_PATH
-
-    imgs = convert_from_path(path, **convert_kwargs)
+    # Combine text from all pages
     full_text = ''
-    for img in imgs:
-        b64 = image_to_base64(img)
-        page_text = google_vision_ocr(b64)
-        full_text += page_text + '\n'
-        app.logger.info(f"Vision OCR result:\n{page_text[:300]}")
+    for page in result.get('pages', []):
+        full_text += page.get('markdown', '') + '\n'
+
+    app.logger.info(f"Mistral OCR result:\n{full_text[:500]}")
     return full_text
 
 def parse(text, pdf_date_dt):
@@ -121,6 +122,8 @@ def parse(text, pdf_date_dt):
 
     for line in text.splitlines():
         line = line.strip()
+        # Strip markdown artifacts from Mistral output
+        line = re.sub(r'[*#`|]+', '', line).strip()
         if not line:
             continue
 
@@ -141,7 +144,7 @@ def parse(text, pdf_date_dt):
 
         lower = line.lower()
 
-        # Subject: handle "Subject Language Arts" or "Subject: Language Arts"
+        # Subject
         if re.match(r'^subject\b', lower):
             val = re.split(r'^subject\s*[:\s]\s*', line, flags=re.IGNORECASE, maxsplit=1)
             if len(val) > 1 and val[1].strip():
@@ -155,7 +158,7 @@ def parse(text, pdf_date_dt):
                 if not is_nil(r):
                     cur['reinforcement'] = r
 
-        # Submission date — use value from PDF directly
+        # Submission date
         elif re.match(r'^submission\s*date\b', lower):
             val = re.split(r'^submission\s*date\s*[:\s]\s*', line, flags=re.IGNORECASE, maxsplit=1)
             if len(val) > 1 and val[1].strip() and not is_nil(val[1]):
@@ -206,18 +209,17 @@ def consolidate_by_week(all_periods):
 def health():
     import shutil
     return jsonify({
-        'tesseract': shutil.which('tesseract'),
         'pdftoppm': shutil.which('pdftoppm'),
         'uploads_dir': os.path.exists(app.config['UPLOAD_FOLDER']),
-        'vision_api_key_set': bool(GOOGLE_VISION_API_KEY)
+        'mistral_api_key_set': bool(MISTRAL_API_KEY)
     })
 
 @app.route('/process', methods=['POST'])
 def process():
     saved = []
     try:
-        if not GOOGLE_VISION_API_KEY:
-            return jsonify({'error': 'Google Vision API key not configured on server.'}), 500
+        if not MISTRAL_API_KEY:
+            return jsonify({'error': 'Mistral API key not configured on server.'}), 500
 
         files = request.files.getlist('pdfs')
         if not files or all(f.filename == '' for f in files):
@@ -229,7 +231,7 @@ def process():
             f.save(path)
             saved.append(path)
             pdf_date = parse_date_from_filename(f.filename)
-            text = pdf_to_text(path)
+            text = mistral_ocr(path)
             all_periods.extend(parse(text, pdf_date))
 
         weeks = consolidate_by_week(all_periods)

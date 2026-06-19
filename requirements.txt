@@ -1,6 +1,3 @@
 flask
-pdfplumber
-pdf2image
-Pillow
 requests
 gunicorn
