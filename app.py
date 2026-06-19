@@ -15,30 +15,19 @@ MISTRAL_API_KEY = os.environ.get('MISTRAL_API_KEY', '')
 
 SKIP = {
     'assembly', 'break', 'lunch', 'sports', 'pe', 'dance',
-    'music', 'yoga', 'meditation', 'skill', 'unknown',
-    'library', 'spa', 'enrichment', 'skill programme',
-    'support-mathematics', 'support-language arts'
+    'music', 'yoga', 'meditation', 'skill', 'unknown'
 }
 
 SUBJ_MAP = {
-    'support-language arts': 'Support - Language Arts',
-    'support-mathematics': 'Support - Mathematics',
-    'english language arts': 'English Language Arts',
-    'english literature': 'English Literature',
     'language arts(support)': 'Language Arts (Support)',
     'language arts': 'Language Arts',
     'literature': 'Literature',
-    'social science': 'Social Science',
     'ssc': 'SSC',
-    'mathematics': 'Math',
     'math': 'Math',
+    'mathematics': 'Math',
     'art': 'Art',
     'computer': 'Computer',
     'robotics': 'Robotics',
-    'kannada 2nd language': '2ND LANGUAGE - Kannada',
-    'kannada': '2ND LANGUAGE - Kannada',
-    'hindi 3rd language': '3RD LANGUAGE - Hindi',
-    'hindi': '3RD LANGUAGE - Hindi',
     '2nd language -hindi': '2ND LANGUAGE - Hindi',
     '2nd ianguage -hindi': '2ND LANGUAGE - Hindi',
     '2nd language -kannada': '2ND LANGUAGE - Kannada',
@@ -69,42 +58,16 @@ def clean_reinf(v):
     return re.sub(r'^[^A-Za-z0-9]+', '', v)
 
 def parse_date_from_filename(basename):
-    # Try: 18-Jun-26 or 18-Jun-2026 (month name)
-    m = re.search(r'(\d{1,2})-([A-Za-z]{3,})-(\d{2,4})', basename)
-    if m:
-        day, mon_str, yr = m.groups()
-        try:
-            return datetime.strptime(f"{day}-{mon_str[:3]}-{'20'+yr if len(yr)==2 else yr}", "%d-%b-%Y")
-        except ValueError:
-            pass
-    # Try: 18_06_26 or 18.06.2026 (DD_MM_YY style)
+    # Try numeric: 18_06_26 or 18.06.2026
     m = re.search(r'(\d{1,2})[_.](\d{1,2})[_.](\d{2,4})', basename)
     if m:
         day, mon, yr = m.groups()
-        yr_full = int('20'+yr if len(yr)==2 else yr)
-        d, mo = int(day), int(mon)
-        if 1 <= mo <= 12 and 1 <= d <= 31:
-            return datetime(yr_full, mo, d)
-    return None  # Signal to use text-based date
-
-def parse_date_from_text(text):
-    """Extract date from first 200 chars of PDF text."""
-    # Try: 15-6-2026 or 15-06-2026 (DD-M-YYYY)
-    m = re.search(r'\b(\d{1,2})-(\d{1,2})-(\d{4})\b', text[:200])
-    if m:
-        d, mo, yr = int(m.group(1)), int(m.group(2)), int(m.group(3))
-        if 1 <= mo <= 12 and 1 <= d <= 31:
-            return datetime(yr, mo, d)
-    # Try: 6/12/2026 (M/D/YYYY US format as seen in these PDFs)
-    m = re.search(r'\b(\d{1,2})/(\d{1,2})/(\d{4})\b', text[:200])
-    if m:
-        a, b, yr = int(m.group(1)), int(m.group(2)), int(m.group(3))
-        if a > 12:
-            return datetime(yr, b, a)   # D/M/YYYY
-        elif b > 12:
-            return datetime(yr, a, b)   # M/D/YYYY
-        else:
-            return datetime(yr, a, b)   # Assume M/D/YYYY (US format)
+        return datetime(int('20'+yr if len(yr)==2 else yr), int(mon), int(day))
+    # Try: 18-Jun-26 or 18-Jun-2026
+    m2 = re.search(r'(\d{1,2})-([A-Za-z]{3})-(\d{2,4})', basename)
+    if m2:
+        day, mon_str, yr = m2.groups()
+        return datetime.strptime(f"{day}-{mon_str}-{'20'+yr if len(yr)==2 else yr}", "%d-%b-%Y")
     return datetime.today()
 
 def fmt_dt(dt): return dt.strftime('%d %b %Y')
@@ -154,33 +117,12 @@ def mistral_ocr(path):
 def parse(text, pdf_date_dt):
     periods = []
     cur = None
-    additional_info = []
-    in_additional = False
 
     for line in text.splitlines():
         line = line.strip()
         # Strip markdown artifacts from Mistral output
         line = re.sub(r'[*#`|]+', '', line).strip()
         if not line:
-            continue
-
-        lower = line.lower()
-
-        # Detect Additional Information / Note section
-        if re.match(r'^(additional\s*information|note\s*:?)', lower):
-            in_additional = True
-            if cur and cur.get('subject') and cur['subject'] != 'Unknown':
-                periods.append(cur)
-                cur = None
-            # Capture inline content after the label
-            val = re.split(r'^(additional\s*information|note)\s*[:\s]?\s*', line, flags=re.IGNORECASE, maxsplit=1)
-            if len(val) > 1 and val[-1].strip() and not is_nil(val[-1]):
-                additional_info.append(val[-1].strip())
-            continue
-
-        if in_additional:
-            if not is_nil(line):
-                additional_info.append(line)
             continue
 
         # Match "Period - 1", "Period-1", "Period : 1"
@@ -197,6 +139,8 @@ def parse(text, pdf_date_dt):
 
         if cur is None:
             continue
+
+        lower = line.lower()
 
         # Subject
         if re.match(r'^subject\b', lower):
@@ -222,7 +166,7 @@ def parse(text, pdf_date_dt):
     if cur and cur.get('subject') and cur['subject'] != 'Unknown':
         periods.append(cur)
 
-    return periods, additional_info
+    return periods
 
 def consolidate_by_week(all_periods):
     week_data = defaultdict(lambda: defaultdict(list))
@@ -252,8 +196,6 @@ def consolidate_by_week(all_periods):
                 'reinf_lines': [i['reinf'] for i in items],
                 'submission': submission
             })
-        # Sort rows: Math first, then alphabetically
-        rows.sort(key=lambda r: (0 if 'math' in r['subject'].lower() else 1, r['subject']))
         output.append({
             'monday': fmt_dt(mon),
             'friday': fmt_dt(friday_of(mon)),
@@ -288,9 +230,6 @@ def process():
             saved.append(path)
             pdf_date = parse_date_from_filename(f.filename)
             text = mistral_ocr(path)
-            # If filename didn't have a date, extract from PDF text content
-            if pdf_date is None:
-                pdf_date = parse_date_from_text(text)
             all_periods.extend(parse(text, pdf_date))
 
         weeks = consolidate_by_week(all_periods)
