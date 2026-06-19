@@ -1,8 +1,6 @@
 import os, re, base64
 from io import BytesIO
 from flask import Flask, request, jsonify, render_template
-from pdf2image import convert_from_path
-from PIL import Image
 from collections import defaultdict
 from datetime import datetime, timedelta
 import requests
